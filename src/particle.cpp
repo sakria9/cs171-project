@@ -73,17 +73,11 @@ static Vec3 pressureAcc(float rhoi, float rhoj,float rho0,float mass,float tempa
     *((h-module(diff)))));
     if(coeff>100){
     printf("%f ",coeff);}
-  Vec3 dir=(normalize(diff));
-  if(dir.x!=dir.x||dir.y!=dir.y||dir.z!=dir.z){
-    //printf("dir is nan");
-    //printf("\ndiff:%f %f %f",diff.x,diff.y,diff.z);
-  }
-  return coeff * dir;
+  return coeff * (normalize(diff));
 }
 void ParticleSystem::simulate() {
   // TODO: SPH solver !!!!!
   //Note particle_radius=0.01f
-  simulateTime++;
   int debugCnt=0;
   std::map<std::vector<int>,std::vector<Particle*>> ptr_map;
   for (auto& particle: particles) {
@@ -194,14 +188,10 @@ void ParticleSystem::simulate() {
                 //#Example: 斥力
                 //new_rho+=particle_density*Wpoly6(module(particle.x-ptr->x),INTERACTION_RADIUS);
                 pressure_acc+=pressureAcc(particle.rho,ptr->rho,1.0f,particle.mass,TEMPATURE,particle.x-ptr->x,INTERACTION_RADIUS);
-                // if(pressure_acc.x!=pressure_acc.x||pressure_acc.y!=pressure_acc.y||pressure_acc.z!=pressure_acc.z){
-                //   printf("%f %f %f ;",pressure_acc.x,pressure_acc.y,pressure_acc.z);
-                // }
                 if(pressure_acc.x!=pressure_acc.x||pressure_acc.y!=pressure_acc.y||pressure_acc.z!=pressure_acc.z){
                   printf("%f %f %f ;",pressure_acc.x,pressure_acc.y,pressure_acc.z);
-                  printf("SimulateTime:%d" ,simulateTime);
-                  assert(false);
                 }
+              
               }
             }
           }

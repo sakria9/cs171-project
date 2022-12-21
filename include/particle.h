@@ -24,7 +24,6 @@ public:
 
   const Float xmin = -1, xmax = 1, ymin = 0, ymax = 3, zmin = 0, zmax = 2;
   bool initialized=false;
-  int simulateTime=0;
   explicit ParticleSystem();
   // 生成 (2n+1)^3 个粒子
   explicit ParticleSystem(int n);
