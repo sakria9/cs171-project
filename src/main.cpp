@@ -81,7 +81,7 @@ int main() {
         abort();
     }
 
-    auto particle_system = std::make_shared<ParticleSystem>(10);
+    auto particle_system = std::make_shared<ParticleSystem>(3);
     {
       auto objs = particle_system->boundryIndicators();
       scene.objects.insert(scene.objects.end(), objs.begin(), objs.end());
@@ -95,6 +95,12 @@ int main() {
       Input::Update();
       Time::Update();
       glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+      static Float last_gen_time = Time::elapsed_time;
+      if (Time::elapsed_time - last_gen_time > 0.2f) {
+        last_gen_time = Time::elapsed_time;
+        particle_system->generateParticles(0);
+      }
 
       /// terminate
       if (Input::GetKey(KeyCode::Escape))
