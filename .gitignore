@@ -114,3 +114,35 @@ report/report.fdb_latexmk
 
 ## CMake
 build
+.idea/.name
+.idea/codeStyles/codeStyleConfig.xml
+.idea/codeStyles/Project.xml
+.idea/cs171-project.iml
+.idea/misc.xml
+.idea/modules.xml
+.idea/vcs.xml
+cmake-build-debug/.cmake/api/v1/query/cache-v2
+cmake-build-debug/.cmake/api/v1/query/cmakeFiles-v1
+cmake-build-debug/.cmake/api/v1/query/codemodel-v2
+cmake-build-debug/.cmake/api/v1/query/toolchains-v1
+cmake-build-debug/.cmake/api/v1/reply/cache-v2-0c63d14978bf77d4bea3.json
+cmake-build-debug/.cmake/api/v1/reply/cmakeFiles-v1-e799134bc3f1dacc2bd7.json
+cmake-build-debug/.cmake/api/v1/reply/codemodel-v2-3d092b72f6b7756dd4d7.json
+cmake-build-debug/.cmake/api/v1/reply/directory-.-Debug-d0094a50bb2071803777.json
+cmake-build-debug/.cmake/api/v1/reply/directory-libs.glfw-Debug-dfa125e45f10cff3644c.json
+cmake-build-debug/.cmake/api/v1/reply/directory-libs.glfw.src-Debug-de6b7dd69c29e0c9335b.json
+cmake-build-debug/.cmake/api/v1/reply/directory-libs.glm-Debug-7b235eb07e2e697f1fab.json
+cmake-build-debug/.cmake/api/v1/reply/directory-libs.glm.glm-Debug-b04bfc787e2effe2d578.json
+cmake-build-debug/.cmake/api/v1/reply/index-2022-12-19T15-23-35-0287.json
+cmake-build-debug/.cmake/api/v1/reply/target-glfw-Debug-c332b86d608b4685efe3.json
+cmake-build-debug/.cmake/api/v1/reply/target-main-Debug-9716198477775fa3efeb.json
+cmake-build-debug/.cmake/api/v1/reply/target-uninstall-Debug-5379eb51e699ea17b649.json
+cmake-build-debug/.cmake/api/v1/reply/toolchains-v1-11ba2acb34df3c2bc526.json
+cmake-build-debug/.ninja_deps
+cmake-build-debug/.ninja_log
+cmake-build-debug/build.ninja
+cmake-build-debug/libs/glfw/cmake_uninstall.cmake
+cmake-build-debug/libs/glfw/src/glfw3.pc
+cmake-build-debug/libs/glfw/src/glfw3Config.cmake
+cmake-build-debug/libs/glfw/src/glfw3ConfigVersion.cmake
+cmake-build-debug/libs/glfw/src/glfw_config.h

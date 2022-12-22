@@ -18,6 +18,7 @@ class Particle {
 public:
   Vec3 x{0, 0, 0}, v{0, 0, 0}, a{0, 0, 0};
   Float density, pressure;
+  int collision_count = 0;
   Particle() = default;
   Particle(const Vec3 &x, const Vec3 &v, const Vec3 &a) : x(x), v(v), a(a) {}
 };

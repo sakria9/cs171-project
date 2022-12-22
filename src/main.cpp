@@ -99,7 +99,7 @@ int main() {
       static Float last_gen_time = Time::elapsed_time;
       if (Time::elapsed_time - last_gen_time > 0.2f) {
         last_gen_time = Time::elapsed_time;
-        particle_system->generateParticles(0);
+        //particle_system->generateParticles(0);
       }
 
       /// terminate

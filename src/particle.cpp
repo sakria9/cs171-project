@@ -23,6 +23,26 @@
 //   r_len, 2)));
 // }
 
+//注释main102行停止粒子源
+float dot(const Vec3 &a, const Vec3 &b) {
+  return a.x * b.x + a.y * b.y + a.z * b.z;
+}
+Vec3 normalize(const Vec3 &a) {
+  float len = sqrt(dot(a, a));
+  return a / len;
+}
+float length(const Vec3 &a) { return sqrt(dot(a, a)); }
+Vec3 proj(const Vec3 &a, const Vec3 &b) { return dot(a, b) / dot(b, b) * b; }
+static void collision(Particle &pi,Particle & pj,float loss,float fraction){
+  pi.collision_count++;
+  Vec3 dir = normalize(pi.x - pj.x);
+  Vec3 collision = proj(pi.v, dir);
+  Vec3 new_collision = (collision+proj(pj.v, dir))*0.5f*loss+proj(pj.v, dir)*(1-loss);
+  Vec3 parallel=pi.v-collision;
+  Vec3 new_parallel=((parallel+(pj.v-proj(pj.v, dir))))*0.5f*fraction+parallel*(1-fraction);
+  pi.v=new_parallel+new_collision;
+  pi.v*=pow(0.95f,pi.collision_count);
+}
 void ParticleSystem::basic_sph_solver() {
   buildGrid();
   for (auto &pi : particles) {
@@ -36,6 +56,7 @@ void ParticleSystem::basic_sph_solver() {
           long long hash = gridIndexToHash(neighbor_index);
           if (grid.find(hash) == grid.end())
             continue;
+          pi.collision_count=0;
           for (auto &pj_ptr : grid[hash]) {
             Particle &pj = *pj_ptr;
             // for (auto &pj : particles) {
@@ -73,6 +94,20 @@ void ParticleSystem::basic_sph_solver() {
             Float r_len = glm::length(r);
             if (r_len > H || r_len < epsilon)
               continue;
+            if(r_len<1.4f*particle_radius){
+              a_pressure += 0.00001f*((float)pow(2,(1.4f*particle_radius - r_len)/1.4f*particle_radius)) * r;
+              //pi.v*=0.9f;
+              collision(pi,pj,0.1f,0.1f);
+              //pi.v*=0.99f;
+            }
+            if(r_len<particle_radius){
+              //pi.v*=0.5f;
+              //collision(pi.v,pj.v,0.1f);
+                  int indicator=rand()%3;
+                  pi.a+=Vec3{0,0.9f,0}*(float)(indicator-1);
+                  pj.a-=Vec3{0,0.9f,0}*(float)(indicator-1);
+                  pi.v*=0.5f;
+            }
             a_pressure += Float((pi.pressure + pj.pressure) /
                                 (2 * pi.density * pj.density) *
                                 pow(H - r_len, 2) / r_len) *
