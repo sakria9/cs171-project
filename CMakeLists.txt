@@ -11,6 +11,10 @@ add_subdirectory(libs/glfw)
 include_directories(libs/glfw/include)
 list(APPEND LIBRARIES glfw ${glfw_LIBRARIES})
 
+# stb
+add_subdirectory(libs/stb)
+include_directories(libs/stb)
+
 # glad
 set(GLAD_INCLUDE libs/glad/include)
 include_directories(${GLAD_INCLUDE})
@@ -29,6 +33,12 @@ endif()
 
 # set source files and add executable
 file(GLOB SRC_FILES src/*.cpp)
+
+# openmp
+find_package(OpenMP)
+if (OpenMP_CXX_FOUND)
+    list(APPEND LIBRARIES OpenMP::OpenMP_CXX)
+endif()
 
 add_executable(main ${SRC_FILES} ${INTERNAL_SRC_FILES} src/glad.c)
 target_include_directories(main PRIVATE include)
