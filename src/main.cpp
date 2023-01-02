@@ -91,6 +91,7 @@ int main() {
     Input::Start(window);
     //    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     glEnable(GL_DEPTH_TEST);
+    glDisable(GL_CULL_FACE);
     while (!glfwWindowShouldClose(window)) {
       Input::Update();
       Time::Update();
@@ -99,7 +100,7 @@ int main() {
       static Float last_gen_time = Time::elapsed_time;
       if (Time::elapsed_time - last_gen_time > 0.2f) {
         last_gen_time = Time::elapsed_time;
-        //particle_system->generateParticles(0);
+        particle_system->generateParticles(0);
       }
 
       /// terminate
@@ -120,8 +121,8 @@ int main() {
       /// render
       {
         scene.RenderUpdate();
-        particle_system->renderParticle(scene);
-        // particle_system->renderSurface(scene);
+        //particle_system->renderParticle(scene);
+         particle_system->renderSurface(scene);
       }
 
       // swap front and back buffers

@@ -22,11 +22,17 @@ public:
   Particle() = default;
   Particle(const Vec3 &x, const Vec3 &v, const Vec3 &a) : x(x), v(v), a(a) {}
 };
-
+struct Vertex
+{
+    Vec3 pos;
+    Vec3 norm;
+    Vec2 uv;
+};
 class ParticleSystem {
 public:
   std::vector<Particle> particles;
   std::vector<Vec3> boundaries;
+  std::vector<Vertex> surface_vertices;
 
   robin_hood::unordered_map<long long, std::vector<Particle*>> grid;
 
@@ -50,9 +56,12 @@ public:
   void buildGrid();
   IVec3 coordToGridIndex(const Vec3 &x);
   long long gridIndexToHash(const IVec3 &index);
-
+  float getDensity(const Vec3 &x);
   void renderParticle(const Scene &scene);
+  void MarchCube(float fX, float fY, float fZ, float Scale);
   void renderSurface(const Scene &scene);
+
+
 
   static constexpr unsigned simulation_steps_per_fixed_update_time = 1;
   static constexpr Float fixed_delta_time =
