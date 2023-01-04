@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.16)
 project(CS171-hw5 LANGUAGES C CXX)
 
+add_compile_options(-g -msse -msse2 -msse3 -mssse3 -msse4 -msse4.1 -msse4.2 -O3 -Ofast)
+
 option(USE_FILESYSTEM "use std::filesystem" off)
 
 # glfw

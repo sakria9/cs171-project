@@ -109,35 +109,18 @@ Vec3 viscosity_accel(const Particle &pi, const Particle &pj) {
          viscosity_laplacian(glm::length(r)) * (pj.v - pi.v);
 }
 
-void ParticleSystem::compute_non_pressure_force() {
+void ParticleSystem::advect_non_pressure_force() {
 #pragma omp parallel for
   for (auto &pi : particles) {
-    Float density = density_kernel(0);
+    auto external_force_accel = g;
     for (auto &pj_ptr : pi.neighbors) {
       Particle &pj = *pj_ptr;
-      density += density_kernel(glm::length(pi.x_pred - pj.x_pred));
+      external_force_accel += viscosity_accel(pi, pj);
     }
-    density *= particle_mass;
-    pi.density = density;
-  }
-
-#pragma omp parallel for
-  for (auto &pi : particles) {
-    pi.external_force_accel = g;
-    for (auto &pj_ptr : pi.neighbors) {
-      Particle &pj = *pj_ptr;
-      pi.external_force_accel += viscosity_accel(pi, pj);
-    }
-  }
-}
-void ParticleSystem::advect() {
-#pragma omp parallel for
-  for (auto &pi : particles) {
-    pi.v += pi.external_force_accel * fixed_delta_time;
+    pi.v += external_force_accel * fixed_delta_time;
     pi.x += pi.v * fixed_delta_time;
   }
 }
-
 void ParticleSystem::compute_delta() {
   const Float beta = pow(fixed_delta_time, 2) * pow(particle_mass, 2);
   // TODO: fix
@@ -213,22 +196,20 @@ void ParticleSystem::pressure_iteration() {
 void ParticleSystem::advect_pressure() {
 #pragma omp parallel for
   for (auto &pi : particles) {
-    auto accel = pi.pressure_accel;
-    pi.v += accel * fixed_delta_time;
-    pi.x += accel * fixed_delta_time * fixed_delta_time;
+    pi.v += pi.pressure_accel * fixed_delta_time;
+    pi.x += pi.pressure_accel * fixed_delta_time * fixed_delta_time;
   }
 }
 
 void ParticleSystem::pci_sph_solver() {
   buildGrid();
-  compute_non_pressure_force();
-  advect();
+  advect_non_pressure_force();
 
   prepare_iteration();
   density_err_max = density_0;
   {
     int i = 0;
-    for (; i < 2 && density_err_max / density_0 > 0.01; i++)
+    for (; i < 100 && density_err_max / density_0 > 0.01; i++)
       pressure_iteration();
     // if ((density_err_max / density_0) > 0.01)
     //   std::cerr << "pressure iteration: " << i << ' '

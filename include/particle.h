@@ -21,13 +21,12 @@ const Vec3 g{0, -9.8, 0};
 class Particle {
 public:
   Vec3 x{0, 0, 0}, v{0, 0, 0}, a{0, 0, 0};
-  Float density, pressure;
+  Float density = density_0, pressure;
   int collision_count = 0;
 
   Vec3 x_pred;
 
   Vec3 pressure_accel;
-  Vec3 external_force_accel;
 
   std::vector<Particle *> neighbors;
   Particle() = default;
@@ -67,8 +66,7 @@ public:
   void basic_sph_solver();
 
   void pci_sph_solver();
-  void compute_non_pressure_force();
-  void advect();
+  void advect_non_pressure_force();
   void compute_delta();
   void prepare_iteration();
   void pressure_iteration();

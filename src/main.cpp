@@ -41,6 +41,12 @@ auto drop_left_3d() {
   return particle_system;
 }
 
+auto drop_left_3d_large() {
+  const Float L = 1.0f;
+  auto particle_system = std::make_shared<ParticleSystem>(L);
+  particle_system->generateParticles(Vec3(L, 2 * L, L), 9);
+  return particle_system;
+}
 
 int main() {
 
@@ -111,14 +117,6 @@ int main() {
     scene.camera.transform.rotation = {0, 0, 1, 0};
     scene.light_position = {0, 3, -10};
     scene.light_color = Vec3(1, 1, 1) * Float(1.125);
-
-    // clothes
-    auto cloth = std::make_shared<RectCloth>(cloth_weight, mass_dim, dx_local,
-                                             stiffness, damping_ratio);
-    for (const auto &fixed_mass : fixed_masses) {
-      if (!cloth->SetMassFixedOrNot(fixed_mass.x, fixed_mass.y, true))
-        abort();
-    }
 
     auto particle_system = drop_left_3d();
     {
