@@ -39,39 +39,6 @@ Float cubic_kernel(const Float r_norm) {
 #endif
 }
 
-Vec3 cubic_kernel_gradient(const Vec3 &r) {
-#ifdef D2
-  Float k = 40.0f / 7.0f / M_PI;
-  k = 6.0f * k / pow(H, 2);
-  Float r_norm = glm::length(r);
-  Float q = r_norm / H;
-  if (r_norm > 1e-5 && q <= 1.0) {
-    auto grad_q = r / (r_norm * H);
-    if (q <= 0.5) {
-      return k * q * (3.0f * q - 2.0f) * grad_q;
-    } else {
-      auto factor = 1 - q;
-      return k * (-factor * factor) * grad_q;
-    }
-  }
-  return Vec3{0, 0, 0};
-#else
-  Float r_norm = glm::length(r);
-  Float k = 8 / (M_PI * pow(H, 3));
-  Float q = r_norm / H;
-  if (r_norm > epsilon && q <= 1.0) {
-    auto grad_q = r / (r_norm * H);
-    if (q <= 0.5) {
-      return k * q * (3.0f * q - 2.0f) * grad_q;
-    } else {
-      auto factor = 1 - q;
-      return k * (-factor * factor) * grad_q;
-    }
-  }
-  return Vec3{0, 0, 0};
-#endif
-}
-
 Float poly6_kernel(const Float r_norm) {
 #ifdef D2
   Float k = 4.0f / (M_PI * pow(H, 8));
@@ -151,7 +118,7 @@ void ParticleSystem::compute_k_pci() {
       {
         Vec3 offset{x, y, z};
         Vec3 r = offset * particle_radius;
-        auto grad = cubic_kernel_gradient(r);
+        auto grad = spiky_kernel_gradient(r);
         grad_sum += grad;
         grad_dot_grad_sum += glm::dot(grad, grad);
       }
@@ -166,7 +133,7 @@ Vec3 pressure_accel(const Particle &pi, const Particle &pj) {
   auto res = -Float(density_0 * particle_mass *
                     (pi.pressure / pow(pi.density, 2) +
                      pj.pressure / pow(pj.density, 2))) *
-             cubic_kernel_gradient(pi.x - pj.x);
+             spiky_kernel_gradient(pi.x - pj.x);
   return res;
 }
 
