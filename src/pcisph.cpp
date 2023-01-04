@@ -193,7 +193,6 @@ void ParticleSystem::pressure_iteration() {
       density_pred +=
           particle_mass * cubic_kernel(glm::length(pi.x_pred - pj.x_pred));
     }
-    density_pred = density_pred * density_0;
     density_pred = std::max(density_pred, density_0);
     density_err = std::max(density_err, std::abs(density_0 - density_pred));
     pi.density = density_pred;
@@ -223,9 +222,6 @@ void ParticleSystem::pci_sph_solver() {
   buildGrid();
   compute_non_pressure_force();
   advect();
-
-  // compute_k_pci();
-  k_pci = -1000000;
 
   prepare_iteration();
   density_err = density_0;

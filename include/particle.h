@@ -8,9 +8,9 @@
 const Float particle_radius = 0.05;
 const Float density_0 = 1000;
 #ifdef D2
-const Float particle_mass = 0.28 * pow(2 * particle_radius, 2);
+const Float particle_mass = density_0 * pow(2 * particle_radius, 2);
 #else
-const Float particle_mass = 0.28 * pow(2 * particle_radius, 3);
+const Float particle_mass = density_0 * pow(2 * particle_radius, 3);
 #endif
 const Float H = 4 * particle_radius;
 
@@ -40,7 +40,7 @@ public:
 
   robin_hood::unordered_map<long long, std::vector<Particle *>> grid;
 
-  const Float L = .5;
+  const Float L = .7;
   const Float xmin = -L, xmax = L, ymin = 0, ymax = 2 * L, zmin = 0,
               zmax = 2 * L;
   const size_t grid_size = (2 * L) / H + 1;

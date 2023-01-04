@@ -144,7 +144,7 @@ void ParticleSystem::generateParticles(Vec3 center, int n) {
       Float z = 0;
 #endif
       {
-        Vec3 pos = center + Vec3(x, y, z) * particle_radius;
+        Vec3 pos = center + Vec3(x, y, z) * 2.0f * particle_radius;
         if (isInBoundaries(pos)) {
           particles.push_back(Particle{pos, Vec3(0, 0, 0), Vec3(0, 0, 0)});
         }
