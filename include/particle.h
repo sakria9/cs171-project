@@ -60,11 +60,11 @@ public:
   void pci_sph_solver();
   void compute_non_pressure_force();
   void advect();
-  void compute_k_pci();
+  void compute_delta();
   void prepare_iteration();
   void pressure_iteration();
   void advect_pressure();
-  Float k_pci = -10;
+  Float delta = 0;
   Float density_err = 0;
 
   void simulate();

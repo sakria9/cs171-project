@@ -100,7 +100,7 @@ void ParticleSystem::advect() {
   }
 }
 
-void ParticleSystem::compute_k_pci() {
+void ParticleSystem::compute_delta() {
   const Float beta = pow(fixed_delta_time, 2) * pow(particle_mass, 2);
   // TODO: fix
   // const Float beta = pow(fixed_delta_time, 2) * pow(particle_mass, 2) * 2 / pow(density_0, 2);
@@ -124,9 +124,7 @@ void ParticleSystem::compute_k_pci() {
       }
     }
   }
-  Float delta =
-      -1.0f / (beta * (-glm::dot(grad_sum, grad_sum) - grad_dot_grad_sum));
-  k_pci = -delta;
+  delta = -1.0f / (beta * (-glm::dot(grad_sum, grad_sum) - grad_dot_grad_sum));
 }
 
 Vec3 pressure_accel(const Particle &pi, const Particle &pj) {
@@ -161,9 +159,9 @@ void ParticleSystem::pressure_iteration() {
           particle_mass * cubic_kernel(glm::length(pi.x_pred - pj.x_pred));
     }
     density_pred = std::max(density_pred, density_0);
-    density_err = std::max(density_err, std::abs(density_0 - density_pred));
+    density_err = std::max(density_err, std::abs(density_pred - density_0));
     pi.density = density_pred;
-    pi.pressure += k_pci * (density_0 - density_pred);
+    pi.pressure += delta * (density_pred - density_0);
   }
 
 #pragma omp parallel for
