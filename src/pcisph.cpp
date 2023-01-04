@@ -51,6 +51,8 @@ Float poly6_kernel(const Float r_norm) {
   return 0;
 }
 
+const auto density_kernel = cubic_kernel;
+
 Vec3 spiky_kernel_gradient(const Vec3 &r) {
 #ifdef D2
   Float k = -10.0f / (M_PI * pow(H, 5));
@@ -151,13 +153,12 @@ void ParticleSystem::pressure_iteration() {
   }
 #pragma omp parallel for
   for (auto &pi : particles) {
-    Float density_pred = 0;
-
+    Float density_pred = density_kernel(0);
     for (auto &pj_ptr : pi.neighbors) {
       Particle &pj = *pj_ptr;
-      density_pred +=
-          particle_mass * cubic_kernel(glm::length(pi.x_pred - pj.x_pred));
+      density_pred += density_kernel(glm::length(pi.x_pred - pj.x_pred));
     }
+    density_pred *= particle_mass;
     density_pred = std::max(density_pred, density_0);
     density_err = std::max(density_err, std::abs(density_pred - density_0));
     pi.density = density_pred;
@@ -192,7 +193,7 @@ void ParticleSystem::pci_sph_solver() {
   density_err = density_0;
   {
     int i = 0;
-    for (; i < 100 && density_err / density_0 > 0.01; i++)
+    for (; i < 1 && density_err / density_0 > 0.01; i++)
       pressure_iteration();
     if ((density_err / density_0) > 0.01)
       std::cerr << "pressure iteration: " << i << ' '
