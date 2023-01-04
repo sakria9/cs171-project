@@ -84,7 +84,7 @@ int main() {
         abort();
     }
 
-    auto particle_system = std::make_shared<ParticleSystem>(5);
+    auto particle_system = std::make_shared<ParticleSystem>(1.0f, 5);
     {
       auto objs = particle_system->boundryIndicators();
       scene.objects.insert(scene.objects.end(), objs.begin(), objs.end());

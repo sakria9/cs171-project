@@ -40,14 +40,14 @@ public:
 
   robin_hood::unordered_map<long long, std::vector<Particle *>> grid;
 
-  const Float L = .7;
+  const Float L;
   const Float xmin = -L, xmax = L, ymin = 0, ymax = 2 * L, zmin = 0,
               zmax = 2 * L;
   const size_t grid_size = (2 * L) / H + 1;
 
-  explicit ParticleSystem();
+  explicit ParticleSystem(const Float L);
   // 生成 (2n+1)^3 个粒子
-  explicit ParticleSystem(int n);
+  explicit ParticleSystem(const Float L, int n);
   void generateParticles(Vec3 center, int n);
 
   void enforceBoundaries();

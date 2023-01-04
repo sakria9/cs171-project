@@ -117,15 +117,13 @@ void ParticleSystem::simulate() {
   pci_sph_solver();
 }
 
-ParticleSystem::ParticleSystem() {
+ParticleSystem::ParticleSystem(const Float L) : L(L) {
   std::cout << "radius: " << particle_radius << std::endl;
   std::cout << "support radius: " << H << std::endl;
   std::cout << "mass: " << particle_mass << std::endl;
   std::cout << "rest density: " << density_0 << std::endl;
   compute_delta();
   std::cout << "delta: " << delta << std::endl;
-}
-ParticleSystem::ParticleSystem(int n) : ParticleSystem() {
   boundaries.push_back(Vec3(xmin, ymin, zmin));
   boundaries.push_back(Vec3(xmax, ymin, zmin));
   boundaries.push_back(Vec3(xmin, ymax, zmin));
@@ -134,6 +132,8 @@ ParticleSystem::ParticleSystem(int n) : ParticleSystem() {
   boundaries.push_back(Vec3(xmax, ymin, zmax));
   boundaries.push_back(Vec3(xmin, ymax, zmax));
   boundaries.push_back(Vec3(xmax, ymax, zmax));
+}
+ParticleSystem::ParticleSystem(const Float L, int n) : ParticleSystem(L) {
   generateParticles(Vec3(0, L, L), n);
 }
 void ParticleSystem::generateParticles(Vec3 center, int n) {
