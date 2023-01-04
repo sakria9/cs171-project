@@ -134,10 +134,32 @@ void ParticleSystem::advect() {
 }
 
 void ParticleSystem::compute_k_pci() {
-  const Float beta =
-      pow(fixed_delta_time, 2) * pow(particle_mass, 2) * 2 / pow(density_0, 2);
-  Vec3 sum_gradient_W{0, 0, 0};
-  Float sum_gradient_dot_gradient{0};
+  const Float beta = pow(fixed_delta_time, 2) * pow(particle_mass, 2);
+  // TODO: fix
+  // const Float beta = pow(fixed_delta_time, 2) * pow(particle_mass, 2) * 2 / pow(density_0, 2);
+  Vec3 grad_sum{0, 0, 0};
+  Float grad_dot_grad_sum{0};
+
+  const int half_n = H / particle_radius;
+  for (int x = -half_n; x <= half_n; x++) {
+    for (int y = -half_n; y <= half_n; y++) {
+#ifdef D2
+      int z = 0;
+#else
+      for (int z = -half_n; z <= half_n; z++)
+#endif
+      {
+        Vec3 offset{x, y, z};
+        Vec3 r = offset * particle_radius;
+        auto grad = cubic_kernel_gradient(r);
+        grad_sum += grad;
+        grad_dot_grad_sum += glm::dot(grad, grad);
+      }
+    }
+  }
+  Float delta =
+      -1.0f / (beta * (-glm::dot(grad_sum, grad_sum) - grad_dot_grad_sum));
+  k_pci = -delta;
 }
 
 Vec3 pressure_accel(const Particle &pi, const Particle &pj) {
