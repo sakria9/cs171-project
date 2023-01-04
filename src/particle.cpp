@@ -236,7 +236,7 @@ void ParticleSystem::fixedUpdate() {
 }
 
 void ParticleSystem::renderParticle(const Scene &scene) {
-  const Float particle_scale = .8;
+  const Float particle_scale = .3;
   auto shader = Shader::shader_phong;
   const Vec3 color(0, 0, one);
   auto transform = Transform(Vec3(0, 0, 0), Quat(1, 0, 0, 0),
@@ -599,7 +599,7 @@ void ParticleSystem::MarchCube(float fX, float fY, float fZ, float Scale)
     float Offset, CubeValue[8];   
     Vec3 EdgeVertex[12], EdgeNorm[12];
     Vec3 densitypoint;
-    float TargetValue=700;//Temp
+    float TargetValue=200;//Temp
 //找到立方体的8个顶点的值
     for (int i = 0; i < 8; i++)
     {

@@ -120,7 +120,7 @@ int main() {
         abort();
     }
 
-    auto particle_system = drop_center_3d();
+    auto particle_system = drop_left_3d();
     {
       auto objs = particle_system->boundryIndicators();
       scene.objects.insert(scene.objects.end(), objs.begin(), objs.end());
@@ -166,8 +166,8 @@ int main() {
       /// render
       {
         scene.RenderUpdate();
-        //particle_system->renderParticle(scene);
-         particle_system->renderSurface(scene);
+        particle_system->renderParticle(scene);
+        particle_system->renderSurface(scene);
       }
 
       // swap front and back buffers
