@@ -5,6 +5,7 @@
 #include "scene.h"
 #include "shader.h"
 #include "transform.h"
+#include <cmath>
 #include <memory>
 
 // Float W_poly6(const Vec3 &r, const Float h) {
@@ -43,39 +44,13 @@ static void collision(Particle &pi,Particle & pj,float loss,float fraction){
   pi.v=new_parallel+new_collision;
   pi.v*=0.8f;
 }
-float ParticleSystem::getDensity(const Vec3 &x){
-  float ret=0;
-  IVec3 index = coordToGridIndex(x);
-    for (int i = -1; i <= 1; i++) {
-      for (int j = -1; j <= 1; j++) {
-        for (int k = -1; k <= 1; k++) {
-          IVec3 neighbor_index = index + IVec3(i, j, k);
-          long long hash = gridIndexToHash(neighbor_index);
-          if (grid.find(hash) == grid.end())
-            continue;
-          //pi.collision_count=0;
-          for (auto &pj_ptr : grid[hash]) {
-            Particle &pj = *pj_ptr;
-            // for (auto &pj : particles) {
-            Vec3 r = x - pj.x;
-            Float r_len = glm::length(r);
-            if (r_len > H)
-              continue;
-            ret += pow(H * H - r_len * r_len, 3);
-          }
-        }
-      }
-    }
-  ret = particle_mass * 315.0f / (64.0f * M_PI * pow(H, 9)) * ret;
-  return ret;
-}
 void ParticleSystem::basic_sph_solver() {
   buildGrid();
   for (auto &pi : particles) {
     pi.density = getDensity(pi.x);
     //printf("%f %f %f ;\n",pi.x.x,pi.x.y,pi.x.z);
     pi.collision_count=0;
-    pi.pressure = GasK * (pi.density - RestDensity);
+    pi.pressure = GasK * (pi.density - density_0);
   }
 
   for (auto &pi : particles) {
@@ -124,10 +99,10 @@ void ParticleSystem::basic_sph_solver() {
 
     a_pressure =
         particle_mass * Float(45) / Float(M_PI * pow(H, 6)) * a_pressure;
-    a_viscosity = particle_mass * ViscosityMu * Float(45) /
+    a_viscosity = particle_mass * viscosity * Float(45) /
                   Float(M_PI * pow(H, 6)) * a_viscosity;
-    pi.a = g + a_pressure + a_viscosity;
-    pi.v += pi.a * fixed_delta_time;
+    auto a = g + a_pressure + a_viscosity;
+    pi.v += a * fixed_delta_time;
     pi.x += pi.v * fixed_delta_time;
     if (pi.x.x < xmin)
       pi.x.x = xmin, pi.v.x *= -.3;
@@ -151,31 +126,58 @@ void ParticleSystem::buildGrid() {
     auto hash = gridIndexToHash(index);
     grid[hash].push_back(&p);
   }
+  for (auto &pi : particles) {
+    pi.neighbors.clear();
+    IVec3 index = coordToGridIndex(pi.x);
+    for (int i = std::max(-1, 0 - index.x);
+         i <= std::min<int>(1, grid_size_x - index.x); i++) {
+      for (int j = std::max(-1, 0 - index.y);
+           j <= std::min<int>(1, grid_size_y - index.y); j++) {
+        for (int k = std::max(-1, 0 - index.z);
+             k <= std::min<int>(1, grid_size_z - index.z); k++) {
+          IVec3 neighbor_index = index + IVec3(i, j, k);
+          long long hash = gridIndexToHash(neighbor_index);
+          if (grid.find(hash) == grid.end())
+            continue;
+          for (auto &pj_ptr : grid[hash]) {
+            if (&pi == pj_ptr)
+              continue;
+            Particle &pj = *pj_ptr;
+            Vec3 r = pi.x - pj.x;
+            Float r_len = glm::length(r);
+            if (r_len > H)
+              continue;
+            pi.neighbors.push_back(&pj);
+          }
+        }
+      }
+    }
+  }
 }
 IVec3 ParticleSystem::coordToGridIndex(const Vec3 &x) {
   auto ret = IVec3((x.x - xmin) / H, (x.y - ymin) / H, (x.z - zmin) / H);
-  //assert(ret.x >= 0 && ret.x < grid_size);
-  //assert(ret.y >= 0 && ret.y < grid_size);
-  //assert(ret.z >= 0 && ret.z < grid_size);
-  if(ret.x<0) ret.x=0;
-  if(ret.y<0) ret.y=0;
-  if(ret.z<0) ret.z=0;
-  if(ret.x>=grid_size) ret.x=grid_size-1;
-  if(ret.y>=grid_size) ret.y=grid_size-1;
-  
+  ret.x = std::clamp<int>(ret.x, 0, grid_size_x - 1);
+  ret.y = std::clamp<int>(ret.y, 0, grid_size_y - 1);
+  ret.z = std::clamp<int>(ret.z, 0, grid_size_z - 1);
   return ret;
 }
 long long ParticleSystem::gridIndexToHash(const IVec3 &index) {
-  return index.x * grid_size * grid_size + index.y * grid_size + index.z;
+  return index.x * grid_size_y * grid_size_z + index.y * grid_size_z + index.z;
 }
 
 void ParticleSystem::simulate() {
   // sample_drop_down();
-  basic_sph_solver();
+  // basic_sph_solver();
+  pci_sph_solver();
 }
 
-ParticleSystem::ParticleSystem() {}
-ParticleSystem::ParticleSystem(int n) {
+ParticleSystem::ParticleSystem(const Float L) : L(L) {
+  std::cout << "radius: " << particle_radius << std::endl;
+  std::cout << "support radius: " << H << std::endl;
+  std::cout << "mass: " << particle_mass << std::endl;
+  std::cout << "rest density: " << density_0 << std::endl;
+  compute_delta();
+  std::cout << "delta: " << delta << std::endl;
   boundaries.push_back(Vec3(xmin, ymin, zmin));
   boundaries.push_back(Vec3(xmax, ymin, zmin));
   boundaries.push_back(Vec3(xmin, ymax, zmin));
@@ -184,14 +186,20 @@ ParticleSystem::ParticleSystem(int n) {
   boundaries.push_back(Vec3(xmax, ymin, zmax));
   boundaries.push_back(Vec3(xmin, ymax, zmax));
   boundaries.push_back(Vec3(xmax, ymax, zmax));
-  generateParticles(n);
 }
-void ParticleSystem::generateParticles(int n) {
-  Vec3 center(0, 1, 1);
+ParticleSystem::ParticleSystem(const Float L, int n) : ParticleSystem(L) {
+  generateParticles(Vec3(0, L, L), n);
+}
+void ParticleSystem::generateParticles(Vec3 center, int n) {
   for (int x = -n; x <= n; x++) {
     for (int y = -n; y <= n; y++) {
-      for (int z = -n; z <= n; z++) {
-        Vec3 pos = center + Vec3(x, y, z) * particle_radius * 2.0f;
+#ifndef D2
+      for (int z = -n; z <= n; z++)
+#else
+      Float z = 0;
+#endif
+      {
+        Vec3 pos = center + Vec3(x, y, z) * 2.0f * particle_radius;
         if (isInBoundaries(pos)) {
           particles.push_back(Particle{pos, Vec3(0, 0, 0), Vec3(0, 0, 0)});
         }
@@ -228,7 +236,7 @@ void ParticleSystem::fixedUpdate() {
 }
 
 void ParticleSystem::renderParticle(const Scene &scene) {
-  const Float particle_scale = 0.8;
+  const Float particle_scale = .8;
   auto shader = Shader::shader_phong;
   const Vec3 color(0, 0, one);
   auto transform = Transform(Vec3(0, 0, 0), Quat(1, 0, 0, 0),
@@ -253,8 +261,8 @@ void ParticleSystem::renderParticle(const Scene &scene) {
 void ParticleSystem::sample_drop_down() {
   // sample: drop down
   for (auto &particle : particles) {
-    particle.a = Vec3(0, -9.8, 0);
-    particle.v += particle.a * fixed_delta_time;
+    auto a = Vec3(0, -9.8, 0);
+    particle.v += a * fixed_delta_time;
     auto new_x = particle.x + particle.v * fixed_delta_time;
     if (isInBoundaries(new_x)) {
       particle.x = new_x;

@@ -1,5 +1,4 @@
 #pragma once
-
 /// platform
 
 #define ADVISE_INLINE inline
@@ -106,3 +105,4 @@ constexpr Vec3 gravity = { 0, 9.8, 0 };
 /// utility functions
 
 std::string GetFilePath(const std::string& target, int depth = 5);
+// #define D2

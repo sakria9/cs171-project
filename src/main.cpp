@@ -1,7 +1,46 @@
+#define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "cloth.h"
 #include "particle.h"
 #include "scene.h"
+#include <cstdint>
 #include <memory>
+#include <stb_image_write.h>
+
+auto drop_center_2d() {
+  const Float L = .5f;
+  auto particle_system = std::make_shared<ParticleSystem>(L);
+  particle_system->generateParticles(Vec3(0, L, L), 2);
+  return particle_system;
+}
+
+auto drop_left_2d() {
+  const Float L = 1.0f;
+  auto particle_system = std::make_shared<ParticleSystem>(L);
+  particle_system->generateParticles(Vec3(L, 2 * L, L), 10);
+  return particle_system;
+}
+
+auto drop_center_3d() {
+  const Float L = .3f;
+  auto particle_system = std::make_shared<ParticleSystem>(L);
+  particle_system->generateParticles(Vec3(0, L, L), 2);
+  return particle_system;
+}
+
+auto drop_center_3d_large() {
+  const Float L = 1.0f;
+  auto particle_system = std::make_shared<ParticleSystem>(L);
+  particle_system->generateParticles(Vec3(0, L, L), 3);
+  return particle_system;
+}
+
+auto drop_left_3d() {
+  const Float L = 0.3f;
+  auto particle_system = std::make_shared<ParticleSystem>(L);
+  particle_system->generateParticles(Vec3(L, 2 * L, L), 3);
+  return particle_system;
+}
+
 
 int main() {
 
@@ -81,7 +120,7 @@ int main() {
         abort();
     }
 
-    auto particle_system = std::make_shared<ParticleSystem>(3);
+    auto particle_system = drop_center_3d();
     {
       auto objs = particle_system->boundryIndicators();
       scene.objects.insert(scene.objects.end(), objs.begin(), objs.end());
@@ -92,6 +131,11 @@ int main() {
     //    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     glEnable(GL_DEPTH_TEST);
     glDisable(GL_CULL_FACE);
+
+    uint8_t *pixels = new uint8_t[3 * window_width * window_height];
+
+    std::string prefix = "~/cgout/2d/";
+    size_t cnt = 0;
     while (!glfwWindowShouldClose(window)) {
       Input::Update();
       Time::Update();
@@ -100,20 +144,21 @@ int main() {
       static Float last_gen_time = Time::elapsed_time;
       if (Time::elapsed_time - last_gen_time > 0.2f) {
         last_gen_time = Time::elapsed_time;
-        particle_system->generateParticles(0);
+        // particle_system->generateParticles(0);
       }
 
       /// terminate
       if (Input::GetKey(KeyCode::Escape))
         glfwSetWindowShouldClose(window, true);
 
-      /// fixed update
-      for (unsigned i = 0; i < Time::fixed_update_times_this_frame; ++i) {
-        if (Input::GetKey(KeyCode::Space)) { //! only when space is pressed
-          scene.FixedUpdate();
-          particle_system->fixedUpdate();
-        }
+      // /// fixed update
+      // for (unsigned i = 0; i < Time::fixed_update_times_this_frame; ++i) {
+      if (Input::GetKey(KeyCode::Space)) //! only when space is pressed
+      {
+        scene.FixedUpdate();
+        particle_system->fixedUpdate();
       }
+      // }
 
       /// camera update
       { scene.Update(); }
@@ -121,8 +166,8 @@ int main() {
       /// render
       {
         scene.RenderUpdate();
-        //particle_system->renderParticle(scene);
-         particle_system->renderSurface(scene);
+        particle_system->renderParticle(scene);
+        // particle_system->renderSurface(scene);
       }
 
       // swap front and back buffers
@@ -130,6 +175,17 @@ int main() {
 
       // poll for and process events
       glfwPollEvents();
+
+      // get window capture
+      // std::cerr << "capture " << cnt << std::endl;
+      // glReadPixels(0, 0, window_width, window_height, GL_RGB,
+      // GL_UNSIGNED_BYTE,
+      //              pixels);
+      // std::string filename = prefix + std::to_string(cnt++) + ".png";
+      // stbi_flip_vertically_on_write(true);
+      // stbi_write_png(filename.c_str(), window_width, window_height, 3,
+      // pixels,
+      //                window_width * 3);
     }
   }
 
