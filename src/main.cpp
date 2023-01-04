@@ -20,6 +20,21 @@ auto drop_left_2d() {
   return particle_system;
 }
 
+auto drop_center_3d() {
+  const Float L = .3f;
+  auto particle_system = std::make_shared<ParticleSystem>(L);
+  particle_system->generateParticles(Vec3(0, L, L), 2);
+  return particle_system;
+}
+
+auto drop_left_3d() {
+  const Float L = 0.3f;
+  auto particle_system = std::make_shared<ParticleSystem>(L);
+  particle_system->generateParticles(Vec3(L, 2 * L, L), 3);
+  return particle_system;
+}
+
+
 int main() {
 
   /// settings
@@ -98,7 +113,7 @@ int main() {
         abort();
     }
 
-    auto particle_system = drop_center_2d();
+    auto particle_system = drop_left_3d();
     {
       auto objs = particle_system->boundryIndicators();
       scene.objects.insert(scene.objects.end(), objs.begin(), objs.end());

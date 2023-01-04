@@ -182,7 +182,7 @@ void ParticleSystem::fixedUpdate() {
 }
 
 void ParticleSystem::renderParticle(const Scene &scene) {
-  const Float particle_scale = .5;
+  const Float particle_scale = .8;
   auto shader = Shader::shader_phong;
   const Vec3 color(0, 0, one);
   auto transform = Transform(Vec3(0, 0, 0), Quat(1, 0, 0, 0),
