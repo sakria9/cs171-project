@@ -192,8 +192,13 @@ void ParticleSystem::pci_sph_solver() {
 
   prepare_iteration();
   density_err = density_0;
-  for (int i = 0; i < 100 && density_err / density_0 > 1e-3; i++) {
-    pressure_iteration();
+  {
+    int i = 0;
+    for (; i < 100 && density_err / density_0 > 0.01; i++)
+      pressure_iteration();
+    if ((density_err / density_0) > 0.01)
+      std::cerr << "pressure iteration: " << i << ' '
+                << (density_err / density_0 * 100) << "% error" << std::endl;
   }
   advect_pressure();
 
