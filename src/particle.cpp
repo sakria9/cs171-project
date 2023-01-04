@@ -76,11 +76,11 @@ void ParticleSystem::buildGrid() {
     pi.neighbors.clear();
     IVec3 index = coordToGridIndex(pi.x);
     for (int i = std::max(-1, 0 - index.x);
-         i <= std::min<int>(1, grid_size - index.x); i++) {
+         i <= std::min<int>(1, grid_size_x - index.x); i++) {
       for (int j = std::max(-1, 0 - index.y);
-           j <= std::min<int>(1, grid_size - index.y); j++) {
+           j <= std::min<int>(1, grid_size_y - index.y); j++) {
         for (int k = std::max(-1, 0 - index.z);
-             k <= std::min<int>(1, grid_size - index.z); k++) {
+             k <= std::min<int>(1, grid_size_z - index.z); k++) {
           IVec3 neighbor_index = index + IVec3(i, j, k);
           long long hash = gridIndexToHash(neighbor_index);
           if (grid.find(hash) == grid.end())
@@ -102,13 +102,13 @@ void ParticleSystem::buildGrid() {
 }
 IVec3 ParticleSystem::coordToGridIndex(const Vec3 &x) {
   auto ret = IVec3((x.x - xmin) / H, (x.y - ymin) / H, (x.z - zmin) / H);
-  ret.x = std::clamp<int>(ret.x, 0, grid_size - 1);
-  ret.y = std::clamp<int>(ret.y, 0, grid_size - 1);
-  ret.z = std::clamp<int>(ret.z, 0, grid_size - 1);
+  ret.x = std::clamp<int>(ret.x, 0, grid_size_x - 1);
+  ret.y = std::clamp<int>(ret.y, 0, grid_size_y - 1);
+  ret.z = std::clamp<int>(ret.z, 0, grid_size_z - 1);
   return ret;
 }
 long long ParticleSystem::gridIndexToHash(const IVec3 &index) {
-  return index.x * grid_size * grid_size + index.y * grid_size + index.z;
+  return index.x * grid_size_y * grid_size_z + index.y * grid_size_z + index.z;
 }
 
 void ParticleSystem::simulate() {

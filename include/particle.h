@@ -43,7 +43,9 @@ public:
   const Float L;
   const Float xmin = -L, xmax = L, ymin = 0, ymax = 2 * L, zmin = 0,
               zmax = 2 * L;
-  const size_t grid_size = (2 * L) / H + 1;
+  const size_t grid_size_x = (xmax - xmin) / H + 1;
+  const size_t grid_size_y = (ymax - ymin) / H + 1;
+  const size_t grid_size_z = (zmax - zmin) / H + 1;
 
   explicit ParticleSystem(const Float L);
   // 生成 (2n+1)^3 个粒子
