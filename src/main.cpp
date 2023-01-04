@@ -42,6 +42,7 @@ auto drop_left_3d() {
 }
 
 auto drop_left_3d_large() {
+  // set particle radius to 0.07 may get better result
   const Float L = 1.0f;
   auto particle_system = std::make_shared<ParticleSystem>(L);
   particle_system->generateParticles(Vec3(L, 2 * L, L), 9);
@@ -165,7 +166,7 @@ int main() {
       {
         scene.RenderUpdate();
         particle_system->renderParticle(scene);
-        particle_system->renderSurface(scene);
+        // particle_system->renderSurface(scene);
       }
 
       // swap front and back buffers
