@@ -166,8 +166,8 @@ int main() {
       /// render
       {
         scene.RenderUpdate();
-        particle_system->renderParticle(scene);
-        // particle_system->renderSurface(scene);
+        //particle_system->renderParticle(scene);
+         particle_system->renderSurface(scene);
       }
 
       // swap front and back buffers

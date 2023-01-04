@@ -599,7 +599,7 @@ void ParticleSystem::MarchCube(float fX, float fY, float fZ, float Scale)
     float Offset, CubeValue[8];   
     Vec3 EdgeVertex[12], EdgeNorm[12];
     Vec3 densitypoint;
-    float TargetValue=80000;//Temp
+    float TargetValue=700;//Temp
 //找到立方体的8个顶点的值
     for (int i = 0; i < 8; i++)
     {
@@ -659,7 +659,7 @@ void ParticleSystem::renderSurface(const Scene &scene){
   //   for(int j=0;j<10;j++)
   //     for(int k=0;k<10;k++)
   surface_vertices.clear();
-  float scale=0.2f;
+  float scale=0.05f;
   auto shader = Shader::shader_phong;
   const Vec3 color(0, 0, one);
   
@@ -675,13 +675,13 @@ void ParticleSystem::renderSurface(const Scene &scene){
   //x:-1~1
   //y:0~2
   //z:0~2
-  for (int i = 0; i < 2.0f/scale; i++)
+  for (int i = 0; i < (xmax-xmin)/scale; i++)
   {
-    for (int j = 0; j < 2.0f/scale; j++)
+    for (int j = 0; j < (ymax-ymin)/scale; j++)
     {
-      for (int k = 0; k < 2.0f/scale; k++)
+      for (int k = 0; k < (zmax-zmin)/scale; k++)
       {
-        MarchCube(i*scale-1.0f,j*scale,k*scale,scale);
+        MarchCube(i*scale+xmin,j*scale+ymin,k*scale+zmin,scale);
       }
       
     }
