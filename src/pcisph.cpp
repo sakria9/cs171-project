@@ -119,6 +119,9 @@ void ParticleSystem::advect_non_pressure_force() {
     }
     pi.v += external_force_accel * fixed_delta_time;
     pi.x += pi.v * fixed_delta_time;
+
+    pi.pressure = 0;
+    pi.pressure_accel = {0, 0, 0};
   }
 }
 void ParticleSystem::compute_delta() {
@@ -154,14 +157,6 @@ Vec3 pressure_accel(const Particle &pi, const Particle &pj) {
                      pj.pressure / pow(pj.density, 2))) *
              spiky_kernel_gradient(pi.x - pj.x);
   return res;
-}
-
-void ParticleSystem::prepare_iteration() {
-#pragma omp parallel for
-  for (auto &pi : particles) {
-    pi.pressure = 0;
-    pi.pressure_accel = {0, 0, 0};
-  }
 }
 
 void ParticleSystem::pressure_iteration() {
@@ -205,7 +200,6 @@ void ParticleSystem::pci_sph_solver() {
   buildGrid();
   advect_non_pressure_force();
 
-  prepare_iteration();
   density_err_max = density_0;
   {
     int i = 0;

@@ -68,7 +68,6 @@ public:
   void pci_sph_solver();
   void advect_non_pressure_force();
   void compute_delta();
-  void prepare_iteration();
   void pressure_iteration();
   void advect_pressure();
   Float delta = 0;
