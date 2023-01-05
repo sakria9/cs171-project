@@ -120,6 +120,7 @@ int main() {
     scene.light_color = Vec3(1, 1, 1) * Float(1.125);
 
     auto particle_system = drop_left_3d();
+    particle_system->pcisph_init();
     {
       auto objs = particle_system->boundryIndicators();
       scene.objects.insert(scene.objects.end(), objs.begin(), objs.end());

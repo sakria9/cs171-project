@@ -233,6 +233,13 @@ void ParticleSystem::simulate(unsigned int num_steps) {
 
 void ParticleSystem::fixedUpdate() {
   simulate(simulation_steps_per_fixed_update_time);
+  if (use_external_pcisph)
+    for (size_t i = 0; i < particles.size(); i++) {
+      Float* xi = pcisph.x + i * 3;
+      particles[i].x.x = xi[0];
+      particles[i].x.y = xi[1];
+      particles[i].x.z = xi[2];
+    }
 }
 
 void ParticleSystem::renderParticle(const Scene &scene) {

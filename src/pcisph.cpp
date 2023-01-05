@@ -196,22 +196,36 @@ void ParticleSystem::advect_pressure() {
   }
 }
 
-void ParticleSystem::pci_sph_solver() {
-  buildGrid();
-  advect_non_pressure_force();
-
-  density_err_max = density_0;
-  {
-    int i = 0;
-    for (; i < 100 && density_err_max / density_0 > 0.01; i++)
-      pressure_iteration();
-    // if ((density_err_max / density_0) > 0.01)
-    //   std::cerr << "pressure iteration: " << i << ' '
-    //             << (density_err_max / density_0 * 100) << "% error" << std::endl;
+void ParticleSystem::pcisph_init() {
+  use_external_pcisph = true;
+  pcisph.init(particles.size(), delta);
+  for (size_t i = 0; i < particles.size(); i++) {
+    Float* xi = pcisph.x + i * 3;
+    xi[0] = particles[i].x.x;
+    xi[1] = particles[i].x.y;
+    xi[2] = particles[i].x.z;
+    pcisph.density[i] = particles[i].density;
   }
-  advect_pressure();
+}
 
-  enforceBoundaries();
+void ParticleSystem::pci_sph_solver() {
+  pcisph.solver();
+
+  // buildGrid();
+  // advect_non_pressure_force();
+
+  // density_err_max = density_0;
+  // {
+  //   int i = 0;
+  //   for (; i < 100 && density_err_max / density_0 > 0.01; i++)
+  //     pressure_iteration();
+  //   // if ((density_err_max / density_0) > 0.01)
+  //   //   std::cerr << "pressure iteration: " << i << ' '
+  //   //             << (density_err_max / density_0 * 100) << "% error" << std::endl;
+  // }
+  // advect_pressure();
+
+  // enforceBoundaries();
 }
 
 void ParticleSystem::enforceBoundaries() {

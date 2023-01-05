@@ -4,7 +4,7 @@
 
 class Time {
  public:
-  static constexpr Float fixed_delta_time = Float(0.02);
+  static constexpr Float fixed_delta_time = Float(0.02); // if change, please also modify pcisph.h
 
   static Float delta_time;
   static Float elapsed_time;

@@ -42,6 +42,11 @@ if (OpenMP_CXX_FOUND)
     list(APPEND LIBRARIES OpenMP::OpenMP_CXX)
 endif()
 
+# PCISPH
+add_subdirectory(pcisph)
+list(APPEND LIBRARIES PCISPH)
+include_directories(pcisph)
+
 add_executable(main ${SRC_FILES} ${INTERNAL_SRC_FILES} src/glad.c)
 target_include_directories(main PRIVATE include)
 target_compile_features(main PRIVATE cxx_std_20)

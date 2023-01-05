@@ -1,21 +1,12 @@
 #pragma once
 
 #include "mesh.h"
+#include "pcisph.h"
 #include "robin_hood.h"
 #include "time_system.h"
 #include <memory>
 
-const Float particle_radius = 0.05;
-const Float density_0 = 1000;
-#ifdef D2
-const Float particle_mass = density_0 * pow(2 * particle_radius, 2);
-#else
-const Float particle_mass = density_0 * pow(2 * particle_radius, 3);
-#endif
-const Float H = 4 * particle_radius;
-
 const Float GasK = 1.7;
-const Float viscosity = 0.05;
 const Vec3 g{0, -9.8, 0};
 
 class Particle {
@@ -65,6 +56,10 @@ public:
   void sample_drop_down();
   void basic_sph_solver();
 
+  bool use_external_pcisph = true;
+  void pcisph_init();
+  PCISPH pcisph{xmin, xmax,        ymin,        ymax,       zmin,
+                zmax, grid_size_x, grid_size_y, grid_size_z};
   void pci_sph_solver();
   void advect_non_pressure_force();
   void compute_delta();
@@ -85,9 +80,6 @@ public:
   void MarchCube(float fX, float fY, float fZ, float Scale);
   void renderSurface(const Scene &scene);
 
-  static constexpr unsigned simulation_steps_per_fixed_update_time = 200;
-  static constexpr Float fixed_delta_time =
-      Time::fixed_delta_time / Float(simulation_steps_per_fixed_update_time);
   std::shared_ptr<Mesh> mesh_sphere =
       std::make_shared<Mesh>(MeshPrimitiveType::sphere); // model radius = 0.5
 };
