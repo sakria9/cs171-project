@@ -59,7 +59,15 @@ auto drop_left_3d_Large() {
   // GPU: 1s
   const Float L = 2.0f;
   auto particle_system = std::make_shared<ParticleSystem>(L);
-  particle_system->generateParticles(Vec3(L, 3.0f, L), 13);
+  particle_system->generateParticles(Vec3(1.2f * L, 3.0f, L), 20);
+  return particle_system;
+}
+
+auto drop_3d_Large() {
+  const Float L = 2.5f;
+  auto particle_system = std::make_shared<ParticleSystem>(L);
+  particle_system->generateParticles(Vec3(L, 1.0f, 2 * L), 15);
+  particle_system->generateParticles(Vec3(-1.5f * L, 4.0f, L), 30);
   return particle_system;
 }
 
@@ -190,7 +198,8 @@ int main(int argc, char *argv[]) {
     scene.light_position = {0, 3, -10};
     scene.light_color = Vec3(1, 1, 1) * Float(1.125);
 
-    particle_system->mesh_sphere = std::make_shared<Mesh>(MeshPrimitiveType::sphere);
+    particle_system->mesh_sphere =
+        std::make_shared<Mesh>(MeshPrimitiveType::sphere);
     {
       auto objs = particle_system->boundryIndicators();
       scene.objects.insert(scene.objects.end(), objs.begin(), objs.end());
@@ -259,7 +268,8 @@ int main(int argc, char *argv[]) {
         //              GL_UNSIGNED_BYTE, pixels);
         // std::string filename = prefix + std::to_string(cnt++) + ".png";
         // stbi_flip_vertically_on_write(true);
-        // stbi_write_png(filename.c_str(), window_width, window_height, 3, pixels,
+        // stbi_write_png(filename.c_str(), window_width, window_height, 3,
+        // pixels,
         //                window_width * 3);
       }
     }
