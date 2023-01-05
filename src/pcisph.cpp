@@ -204,28 +204,29 @@ void ParticleSystem::pcisph_init() {
     xi[0] = particles[i].x.x;
     xi[1] = particles[i].x.y;
     xi[2] = particles[i].x.z;
-    pcisph.density[i] = particles[i].density;
   }
 }
 
 void ParticleSystem::pci_sph_solver() {
-  pcisph.solver();
+  if (use_external_pcisph) {
+    pcisph.solver();
+  } else {
+    buildGrid();
+    advect_non_pressure_force();
 
-  // buildGrid();
-  // advect_non_pressure_force();
+    density_err_max = density_0;
+    {
+      int i = 0;
+      for (; i < MAX_PRESSURE_ITERATIONS && density_err_max / density_0 > 0.01; i++)
+        pressure_iteration();
+      // if ((density_err_max / density_0) > 0.01)
+      //   std::cerr << "pressure iteration: " << i << ' '
+      //             << (density_err_max / density_0 * 100) << "% error" << std::endl;
+    }
+    advect_pressure();
 
-  // density_err_max = density_0;
-  // {
-  //   int i = 0;
-  //   for (; i < 100 && density_err_max / density_0 > 0.01; i++)
-  //     pressure_iteration();
-  //   // if ((density_err_max / density_0) > 0.01)
-  //   //   std::cerr << "pressure iteration: " << i << ' '
-  //   //             << (density_err_max / density_0 * 100) << "% error" << std::endl;
-  // }
-  // advect_pressure();
-
-  // enforceBoundaries();
+    enforceBoundaries();
+  }
 }
 
 void ParticleSystem::enforceBoundaries() {

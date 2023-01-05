@@ -1,5 +1,6 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "cloth.h"
+#include "input.h"
 #include "particle.h"
 #include "scene.h"
 #include <cstdint>
@@ -46,6 +47,15 @@ auto drop_left_3d_large() {
   const Float L = 1.0f;
   auto particle_system = std::make_shared<ParticleSystem>(L);
   particle_system->generateParticles(Vec3(L, 2 * L, L), 9);
+  return particle_system;
+}
+
+auto drop_left_3d_Large() {
+  // CPU: 3.5s
+  // GPU: 1s
+  const Float L = 2.0f;
+  auto particle_system = std::make_shared<ParticleSystem>(L);
+  particle_system->generateParticles(Vec3(L, 3.0f, L), 13);
   return particle_system;
 }
 
@@ -120,7 +130,12 @@ int main() {
     scene.light_color = Vec3(1, 1, 1) * Float(1.125);
 
     auto particle_system = drop_left_3d();
-    particle_system->pcisph_init();
+#ifndef USE_CPU
+    particle_system->pcisph_init(); // comment this line to use CPU
+    std::cerr << "Using GPU" << std::endl;
+#else
+    std::cerr << "Using CPU" << std::endl;
+#endif
     {
       auto objs = particle_system->boundryIndicators();
       scene.objects.insert(scene.objects.end(), objs.begin(), objs.end());
@@ -136,6 +151,7 @@ int main() {
 
     std::string prefix = "~/cgout/2d/";
     size_t cnt = 0;
+    bool start = false;
     while (!glfwWindowShouldClose(window)) {
       Input::Update();
       Time::Update();
@@ -151,9 +167,12 @@ int main() {
       if (Input::GetKey(KeyCode::Escape))
         glfwSetWindowShouldClose(window, true);
 
+      if (Input::GetKey(KeyCode::Return))
+        start = true;
+
       // /// fixed update
       // for (unsigned i = 0; i < Time::fixed_update_times_this_frame; ++i) {
-      if (Input::GetKey(KeyCode::Space)) //! only when space is pressed
+      if (Input::GetKey(KeyCode::Space) || start) //! only when space is pressed
       {
         scene.FixedUpdate();
         particle_system->fixedUpdate();
@@ -176,16 +195,18 @@ int main() {
       // poll for and process events
       glfwPollEvents();
 
+      std::cerr << "render time: " << Time::delta_time << std::endl;
+
       // get window capture
-      // std::cerr << "capture " << cnt << std::endl;
-      // glReadPixels(0, 0, window_width, window_height, GL_RGB,
-      // GL_UNSIGNED_BYTE,
-      //              pixels);
-      // std::string filename = prefix + std::to_string(cnt++) + ".png";
-      // stbi_flip_vertically_on_write(true);
-      // stbi_write_png(filename.c_str(), window_width, window_height, 3,
-      // pixels,
-      //                window_width * 3);
+      if (start) {
+        // std::cerr << "capture " << cnt << std::endl;
+        // glReadPixels(0, 0, window_width, window_height, GL_RGB,
+        //              GL_UNSIGNED_BYTE, pixels);
+        // std::string filename = prefix + std::to_string(cnt++) + ".png";
+        // stbi_flip_vertically_on_write(true);
+        // stbi_write_png(filename.c_str(), window_width, window_height, 3, pixels,
+        //                window_width * 3);
+      }
     }
   }
 

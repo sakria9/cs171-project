@@ -1,7 +1,8 @@
 cmake_minimum_required(VERSION 3.16)
 project(CS171-hw5 LANGUAGES C CXX)
 
-add_compile_options(-g -msse -msse2 -msse3 -mssse3 -msse4 -msse4.1 -msse4.2 -O3 -Ofast)
+add_compile_options(-g -msse -msse2 -msse3 -mssse3 -msse4 -msse4.1 -msse4.2 -O3)
+set(CMAKE_BUILD_TYPE Release)
 
 option(USE_FILESYSTEM "use std::filesystem" off)
 
@@ -40,6 +41,24 @@ file(GLOB SRC_FILES src/*.cpp)
 find_package(OpenMP)
 if (OpenMP_CXX_FOUND)
     list(APPEND LIBRARIES OpenMP::OpenMP_CXX)
+endif()
+
+# CUDA
+find_package(CUDA)
+if (CUDA_FOUND)
+    message("CUDA found")
+    enable_language(CUDA)
+    list(APPEND LIBRARIES ${CUDA_LIBRARIES} cuda)
+    set(libcudacxx_DIR /opt/cuda/targets/x86_64-linux/lib/cmake/libcudacxx)
+    set(CUB_DIR /opt/cuda/targets/x86_64-linux/lib/cmake/cub/)
+    set(Thrust_DIR /opt/cuda/targets/x86_64-linux/lib/cmake/thrust)
+    find_package(Thrust REQUIRED CONFIG)
+    thrust_create_target(Thrust)
+    list(APPEND LIBRARIES Thrust)
+else()
+    message("CUDA not found")
+    # fall back to CPU
+    list(APPEND DEFINES -DUSE_CPU)
 endif()
 
 # PCISPH

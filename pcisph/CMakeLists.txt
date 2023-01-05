@@ -1,1 +1,11 @@
-add_library(PCISPH SHARED pcisph.cpp)
+if (CUDA_FOUND)
+    add_library(PCISPH SHARED pcisph.cu grid.cpp)
+    set_target_properties(PCISPH PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+    set_target_properties(PCISPH PROPERTIES CUDA_ARCHITECTURES native)
+else()
+    add_library(PCISPH SHARED pcisph.cpp grid.cpp)
+endif()
+
+if (OpenMP_CXX_FOUND)
+    target_link_libraries(PCISPH PUBLIC OpenMP::OpenMP_CXX)
+endif()

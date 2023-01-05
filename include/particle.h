@@ -56,7 +56,7 @@ public:
   void sample_drop_down();
   void basic_sph_solver();
 
-  bool use_external_pcisph = true;
+  bool use_external_pcisph = false;
   void pcisph_init();
   PCISPH pcisph{xmin, xmax,        ymin,        ymax,       zmin,
                 zmax, grid_size_x, grid_size_y, grid_size_z};

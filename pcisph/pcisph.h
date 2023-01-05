@@ -1,13 +1,16 @@
 #include <cmath>
+
 using Float = float;
 
+const int MAX_PRESSURE_ITERATIONS = 100;
 const int MAX_NEIGHBORS = 45;
 const Float particle_radius = 0.05;
 const Float density_0 = 1000;
 #ifdef D2
 const Float particle_mass = density_0 * std::pow(2 * particle_radius, 2);
 #else
-const Float particle_mass = density_0 * std::pow(2 * particle_radius, 3);
+// const Float particle_mass = density_0 * std::pow(2 * particle_radius, 3);
+const Float particle_mass = 1; // to make CUDA happy
 #endif
 const Float H = 4 * particle_radius;
 const Float viscosity = 0.05;
@@ -37,3 +40,8 @@ public:
   int *neighbors = 0;
   ~PCISPH();
 };
+
+void buildGrid(int n, Float *x, const Float xmin, const Float ymin,
+               const Float zmin, const size_t grid_size_x,
+               const size_t grid_size_y, const size_t grid_size_z,
+               int *neighbors);
