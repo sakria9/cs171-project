@@ -1,3 +1,7 @@
+#include <chrono>
+#include <cstdio>
+#include <fstream>
+#include <string>
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "cloth.h"
 #include "input.h"
@@ -59,9 +63,66 @@ auto drop_left_3d_Large() {
   return particle_system;
 }
 
-int main() {
+int main(int argc, char *argv[]) {
+  auto particle_system = drop_left_3d();
+#ifndef USE_CPU
+  particle_system->external_pcisph_init(); // comment this line to use CPU
+  std::cerr << "Using GPU" << std::endl;
+#else
+  std::cerr << "Using CPU" << std::endl;
+#endif
+  if (argc == 2) {
+    // read from file
+    std::string filepath = argv[1];
+    std::cerr << "Read from " << filepath << std::endl;
+    std::fstream file;
+    file.open(filepath, std::ios::in | std::ios::binary);
+    size_t n;
+    file.read((char *)&n, sizeof(int));
+    size_t rounds;
+    file.read((char *)&rounds, sizeof(int));
+    std::cerr << "Read " << n << " particles, " << rounds << " frames"
+              << std::endl;
+    std::vector<Float> data;
+    data.resize(3 * n * rounds);
+    file.read((char *)data.data(), sizeof(Float) * 3 * n * rounds);
+    file.close();
+    std::cerr << "Read data " << data.size() << std::endl;
+    particle_system->use_data_init(n, std::move(data));
+  }
+  if (argc == 3) {
+    // simulate and output to file
+    std::string filepath = argv[1];
+    size_t rounds = std::stoull(argv[2]);
 
-  /// settings
+    std::vector<Float> data;
+    size_t n = particle_system->particles.size();
+    data.resize(3 * n);
+
+    std::cerr << "Output to " << filepath << std::endl;
+    std::fstream file;
+    file.open(filepath, std::ios::out | std::ios::binary);
+    file.write((char *)&n, sizeof(int));
+    file.write((char *)&rounds, sizeof(int));
+
+    for (int cnt = 0; cnt < rounds; cnt++) {
+      auto st = std::chrono::high_resolution_clock::now();
+      std::cerr << "rendering frame " << cnt << std::endl;
+      particle_system->fixedUpdate();
+      for (int i = 0; i < n; i++) {
+        data[3 * i + 0] = particle_system->particles[i].x.x;
+        data[3 * i + 1] = particle_system->particles[i].x.y;
+        data[3 * i + 2] = particle_system->particles[i].x.z;
+      }
+      file.write((char *)data.data(), sizeof(Float) * 3 * n);
+      auto ed = std::chrono::high_resolution_clock::now();
+      auto dur = std::chrono::duration_cast<std::chrono::milliseconds>(ed - st);
+      std::cerr << "frame " << cnt << " took " << dur.count() << "ms"
+                << std::endl;
+    }
+    file.close();
+    exit(0);
+  }
 
   // window
   constexpr int window_width = 1920;
@@ -129,13 +190,7 @@ int main() {
     scene.light_position = {0, 3, -10};
     scene.light_color = Vec3(1, 1, 1) * Float(1.125);
 
-    auto particle_system = drop_left_3d();
-#ifndef USE_CPU
-    particle_system->pcisph_init(); // comment this line to use CPU
-    std::cerr << "Using GPU" << std::endl;
-#else
-    std::cerr << "Using CPU" << std::endl;
-#endif
+    particle_system->mesh_sphere = std::make_shared<Mesh>(MeshPrimitiveType::sphere);
     {
       auto objs = particle_system->boundryIndicators();
       scene.objects.insert(scene.objects.end(), objs.begin(), objs.end());
@@ -195,7 +250,7 @@ int main() {
       // poll for and process events
       glfwPollEvents();
 
-      std::cerr << "render time: " << Time::delta_time << std::endl;
+      // std::cerr << "render time: " << Time::delta_time << std::endl;
 
       // get window capture
       if (start) {

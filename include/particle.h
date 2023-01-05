@@ -56,8 +56,13 @@ public:
   void sample_drop_down();
   void basic_sph_solver();
 
+  bool use_data = false;
+  std::vector<Float> data;
+  size_t data_idx;
+  void use_data_init(size_t n, std::vector<Float> &&data);
+
   bool use_external_pcisph = false;
-  void pcisph_init();
+  void external_pcisph_init();
   PCISPH pcisph{xmin, xmax,        ymin,        ymax,       zmin,
                 zmax, grid_size_x, grid_size_y, grid_size_z};
   void pci_sph_solver();
@@ -80,6 +85,5 @@ public:
   void MarchCube(float fX, float fY, float fZ, float Scale);
   void renderSurface(const Scene &scene);
 
-  std::shared_ptr<Mesh> mesh_sphere =
-      std::make_shared<Mesh>(MeshPrimitiveType::sphere); // model radius = 0.5
+  std::shared_ptr<Mesh> mesh_sphere; // model radius = 0.5
 };

@@ -196,7 +196,7 @@ void ParticleSystem::advect_pressure() {
   }
 }
 
-void ParticleSystem::pcisph_init() {
+void ParticleSystem::external_pcisph_init() {
   use_external_pcisph = true;
   pcisph.init(particles.size(), delta);
   for (size_t i = 0; i < particles.size(); i++) {
