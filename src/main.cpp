@@ -85,9 +85,9 @@ int main(int argc, char *argv[]) {
     std::cerr << "Read from " << filepath << std::endl;
     std::fstream file;
     file.open(filepath, std::ios::in | std::ios::binary);
-    size_t n;
+    int n;
     file.read((char *)&n, sizeof(int));
-    size_t rounds;
+    int rounds;
     file.read((char *)&rounds, sizeof(int));
     std::cerr << "Read " << n << " particles, " << rounds << " frames"
               << std::endl;
@@ -101,10 +101,10 @@ int main(int argc, char *argv[]) {
   if (argc == 3) {
     // simulate and output to file
     std::string filepath = argv[1];
-    size_t rounds = std::stoull(argv[2]);
+    int rounds = std::stoi(argv[2]);
 
     std::vector<Float> data;
-    size_t n = particle_system->particles.size();
+    int n = particle_system->particles.size();
     data.resize(3 * n);
 
     std::cerr << "Output to " << filepath << std::endl;
