@@ -65,11 +65,10 @@ PCISPH::~PCISPH() {
   cudaFree(neighbors);
 }
 
-__device__ __host__ Float viscosity_laplacian(const Float r_norm) {
+__device__ Float viscosity_laplacian(Float r_norm) {
   Float k = 45.0f / (M_PI * pow(H, 6));
-  if (r_norm <= H)
-    return k * (H - r_norm);
-  return 0;
+  r_norm = min(r_norm, H);
+  return k * (H - r_norm);
 }
 
 __device__ __host__ Float cubic_kernel(const Float r_norm) {
