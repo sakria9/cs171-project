@@ -14,6 +14,9 @@ const Float particle_mass = density_0 * std::pow(2 * particle_radius, 2);
 const Float particle_mass = 1; // to make CUDA happy
 #endif
 const Float H = 4 * particle_radius;
+const Float H2 = H * H;
+const Float H3 = H * H * H;
+const Float H6 = H * H * H * H * H * H;
 const Float viscosity = 0.05;
 
 static constexpr unsigned simulation_steps_per_fixed_update_time = 200;

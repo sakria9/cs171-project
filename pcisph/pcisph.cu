@@ -8,8 +8,7 @@
 #include <thrust/extrema.h>
 #include <vector>
 
-#define get_tid()                                                              \
-  (blockDim.x * (blockIdx.x + blockIdx.y * gridDim.x) + threadIdx.x)
+#define get_tid() (blockDim.x * blockIdx.x + threadIdx.x)
 
 __device__ __constant__ unsigned int n;
 __device__ __constant__ Float xmin, xmax, ymin, ymax, zmin, zmax;
@@ -104,6 +103,8 @@ PCISPH::~PCISPH() {
 
 __device__ int clamp(int x, int a, int b) { return max(a, min(b, x)); }
 
+__device__ __forceinline__ float sqr(float x) { return x * x; }
+
 __device__ int3 coordToGridIndex(float x, float y, float z) {
   int3 index;
   index.x = clamp((int)((x - xmin) / H), 0, grid_size_x - 1);
@@ -157,9 +158,9 @@ __global__ void compute_neighbor(int grid[][MAX_PARTICLE_IN_GRID + 1], Float *x,
 
             Float *xj = x + pj * 3;
             Float r[3] = {xi[0] - xj[0], xi[1] - xj[1], xi[2] - xj[2]};
-            Float r_norm = sqrt(r[0] * r[0] + r[1] * r[1] + r[2] * r[2]);
+            Float r_norm_sqr = r[0] * r[0] + r[1] * r[1] + r[2] * r[2];
 
-            if (r_norm > H)
+            if (r_norm_sqr > H2)
               continue;
             nei[cnt++] = pj;
             if (cnt == MAX_NEIGHBORS)
@@ -175,13 +176,14 @@ __global__ void compute_neighbor(int grid[][MAX_PARTICLE_IN_GRID + 1], Float *x,
 }
 
 __device__ Float viscosity_laplacian(Float r_norm) {
-  Float k = 45.0f / (M_PI * pow(H, 6));
+  Float k = 45.0f / (M_PI * H6);
   r_norm = min(r_norm, H);
   return k * (H - r_norm);
 }
 
+const Float cubic_kernel0 = 8 / (M_PI * H3);
 __device__ __host__ Float cubic_kernel(const Float r_norm) {
-  Float k = 8 / (M_PI * pow(H, 3));
+  Float k = 8 / (M_PI * H3);
   Float q = r_norm / H;
   if (q <= 1.0) {
     if (q <= 0.5) {
@@ -208,7 +210,7 @@ __global__ void compute_non_pressure_force(Float *x, Float *v, Float *density,
 
       Float *xi = x + i * 3, *xj = x + j * 3;
       Float r[3] = {xi[0] - xj[0], xi[1] - xj[1], xi[2] - xj[2]};
-      Float r_norm = sqrtf(r[0] * r[0] + r[1] * r[1] + r[2] * r[2]);
+      Float r_norm = norm3df(r[0], r[1], r[2]);
       Float k = viscosity * (particle_mass / density[j]) *
                 viscosity_laplacian(r_norm);
 
@@ -250,7 +252,7 @@ __global__ void compute_density(Float *x, Float *density, Float *density_err,
     int *ptr = neighbors + i * MAX_NEIGHBORS;
     int *end = ptr + MAX_NEIGHBORS;
 
-    Float density_i = cubic_kernel(0);
+    Float density_i = cubic_kernel0;
     for (; ptr != end; ptr++) {
       int j = *ptr;
       if (j == -1)
@@ -258,7 +260,7 @@ __global__ void compute_density(Float *x, Float *density, Float *density_err,
 
       Float *xi = x + i * 3, *xj = x + j * 3;
       Float r[3] = {xi[0] - xj[0], xi[1] - xj[1], xi[2] - xj[2]};
-      Float r_norm = sqrt(r[0] * r[0] + r[1] * r[1] + r[2] * r[2]);
+      Float r_norm = norm3df(r[0], r[1], r[2]);
       density_i += cubic_kernel(r_norm);
     }
     density_i = density_i * particle_mass;
@@ -304,14 +306,13 @@ __global__ void compute_pressure_accel(Float *x, Float *pressure,
 
       Float *xi = x + i * 3, *xj = x + j * 3;
       Float r[3] = {xi[0] - xj[0], xi[1] - xj[1], xi[2] - xj[2]};
-      Float r_norm = sqrt(r[0] * r[0] + r[1] * r[1] + r[2] * r[2]);
+      Float r_norm = norm3df(r[0], r[1], r[2]);
 
       if (r_norm > 1e-5 && r_norm <= H) {
-        Float k = -density_0 * particle_mass *
-                  (pressure[i] / pow(density[i], 2) +
-                   pressure[j] / pow(density[j], 2)) *
-                  (-45.0f / (M_PI * pow(H, 6))) * (H - r_norm) * (H - r_norm) /
-                  r_norm;
+        Float k =
+            (density_0 * particle_mass * (45.0f / (M_PI * H6))) *
+            (pressure[i] / sqr(density[i]) + pressure[j] / sqr(density[j])) *
+            sqr(H - r_norm) / r_norm;
         acc[0] += k * r[0], acc[1] += k * r[1], acc[2] += k * r[2];
       }
     }
