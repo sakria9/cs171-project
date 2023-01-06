@@ -72,14 +72,10 @@ auto drop_3d_Large() {
 }
 
 int main(int argc, char *argv[]) {
-  auto particle_system = drop_left_3d();
-#ifndef USE_CPU
-  particle_system->external_pcisph_init(); // comment this line to use CPU
-  std::cerr << "Using GPU" << std::endl;
-#else
-  std::cerr << "Using CPU" << std::endl;
-#endif
+  std::shared_ptr<ParticleSystem> particle_system;
   if (argc == 2) {
+    // do not show boundary indicators (set to 1000.0f)
+    particle_system = std::make_shared<ParticleSystem>(1000.0f);
     // read from file
     std::string filepath = argv[1];
     std::cerr << "Read from " << filepath << std::endl;
@@ -97,39 +93,49 @@ int main(int argc, char *argv[]) {
     file.close();
     std::cerr << "Read data " << data.size() << std::endl;
     particle_system->use_data_init(n, std::move(data));
-  }
-  if (argc == 3) {
-    // simulate and output to file
-    std::string filepath = argv[1];
-    int rounds = std::stoi(argv[2]);
+    particle_system->fixedUpdate();
+  } else {
+    particle_system = drop_left_3d();
+#ifndef USE_CPU
+    particle_system->external_pcisph_init(); // comment this line to use CPU
+    std::cerr << "Using GPU" << std::endl;
+#else
+    std::cerr << "Using CPU" << std::endl;
+#endif
+    if (argc == 3) {
+      // simulate and output to file
+      std::string filepath = argv[1];
+      int rounds = std::stoi(argv[2]);
 
-    std::vector<Float> data;
-    int n = particle_system->particles.size();
-    data.resize(3 * n);
+      std::vector<Float> data;
+      int n = particle_system->particles.size();
+      data.resize(3 * n);
 
-    std::cerr << "Output to " << filepath << std::endl;
-    std::fstream file;
-    file.open(filepath, std::ios::out | std::ios::binary);
-    file.write((char *)&n, sizeof(int));
-    file.write((char *)&rounds, sizeof(int));
+      std::cerr << "Output to " << filepath << std::endl;
+      std::fstream file;
+      file.open(filepath, std::ios::out | std::ios::binary);
+      file.write((char *)&n, sizeof(int));
+      file.write((char *)&rounds, sizeof(int));
 
-    for (int cnt = 0; cnt < rounds; cnt++) {
-      auto st = std::chrono::high_resolution_clock::now();
-      std::cerr << "rendering frame " << cnt << std::endl;
-      particle_system->fixedUpdate();
-      for (int i = 0; i < n; i++) {
-        data[3 * i + 0] = particle_system->particles[i].x.x;
-        data[3 * i + 1] = particle_system->particles[i].x.y;
-        data[3 * i + 2] = particle_system->particles[i].x.z;
+      for (int cnt = 0; cnt < rounds; cnt++) {
+        auto st = std::chrono::high_resolution_clock::now();
+        std::cerr << "rendering frame " << cnt << std::endl;
+        particle_system->fixedUpdate();
+        for (int i = 0; i < n; i++) {
+          data[3 * i + 0] = particle_system->particles[i].x.x;
+          data[3 * i + 1] = particle_system->particles[i].x.y;
+          data[3 * i + 2] = particle_system->particles[i].x.z;
+        }
+        file.write((char *)data.data(), sizeof(Float) * 3 * n);
+        auto ed = std::chrono::high_resolution_clock::now();
+        auto dur =
+            std::chrono::duration_cast<std::chrono::milliseconds>(ed - st);
+        std::cerr << "frame " << cnt << " took " << dur.count() << "ms"
+                  << std::endl;
       }
-      file.write((char *)data.data(), sizeof(Float) * 3 * n);
-      auto ed = std::chrono::high_resolution_clock::now();
-      auto dur = std::chrono::duration_cast<std::chrono::milliseconds>(ed - st);
-      std::cerr << "frame " << cnt << " took " << dur.count() << "ms"
-                << std::endl;
+      file.close();
+      exit(0);
     }
-    file.close();
-    exit(0);
   }
 
   // window
