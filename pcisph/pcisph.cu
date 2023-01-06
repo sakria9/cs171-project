@@ -44,7 +44,7 @@ void PCISPH::init(int n, Float delta) {
   this->delta = delta;
   cudaMallocManaged(&x, sizeof(Float) * n * 3);
   cudaMalloc(&x_last, sizeof(Float) * n * 3);
-  cudaMallocManaged(&v, sizeof(Float) * n * 3);
+  cudaMalloc(&v, sizeof(Float) * n * 3);
   cudaMemset(v, 0, sizeof(Float) * n * 3);
   cudaMalloc(&density, sizeof(Float) * n);
   thrust::fill(thrust::device, density, density + n, density_0);
