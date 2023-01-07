@@ -3,7 +3,7 @@ if (CUDA_FOUND)
     set_target_properties(PCISPH PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
     set_target_properties(PCISPH PROPERTIES CUDA_ARCHITECTURES native)
 else()
-    add_library(PCISPH SHARED pcisph.cpp grid.cpp)
+    add_library(PCISPH SHARED pcisph.cpp)
 endif()
 
 if (OpenMP_CXX_FOUND)
