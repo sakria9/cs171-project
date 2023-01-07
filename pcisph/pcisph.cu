@@ -64,7 +64,8 @@ void PCISPH::init(int n, Float delta) {
   cudaMemcpyToSymbol(::grid_size, &grid_size, sizeof(unsigned int));
   cudaMemcpyToSymbol(::delta, &delta, sizeof(Float));
 
-  cudaMallocManaged(&x, sizeof(Float) * n * 3);
+  x = (Float *)malloc(sizeof(Float) * n * 3);
+  cudaMalloc(&x_cuda, sizeof(Float) * n * 3);
   cudaMalloc(&x_last, sizeof(Float) * n * 3);
   cudaMalloc(&v, sizeof(Float) * n * 3);
   cudaMemset(v, 0, sizeof(Float) * n * 3);
@@ -79,8 +80,16 @@ void PCISPH::init(int n, Float delta) {
   cudaMallocManaged(&hash, sizeof(unsigned int) * n);
 }
 
+void PCISPH::copy_x_to_x_cuda() {
+  cudaMemcpy(x_cuda, x, sizeof(Float) * n * 3, cudaMemcpyHostToDevice);
+}
+void PCISPH::copy_x_cuda_to_x() {
+  cudaMemcpy(x, x_cuda, sizeof(Float) * n * 3, cudaMemcpyDeviceToHost);
+}
+
 PCISPH::~PCISPH() {
-  cudaFree(x);
+  free(x);
+  cudaFree(x_cuda);
   cudaFree(x_last);
   cudaFree(v);
   cudaFree(density);
@@ -329,18 +338,18 @@ __global__ void enforceBoundaryComponent(int n, Float *x, Float *v, Float xmin,
 
 void PCISPH::solver() {
   clearGrid<<<grid_every_grid, bs>>>(grid);
-  compute_hash<<<grid_every_particle, bs>>>(n, x, hash);
+  compute_hash<<<grid_every_particle, bs>>>(n, x_cuda, hash);
   for (int i = 0; i < n; i++) {
     int hashi = hash[i];
     if (grid[hashi][0] < MAX_PARTICLE_IN_GRID)
       grid[hashi][++grid[hashi][0]] = i;
   }
-  compute_neighbor<<<grid_every_particle, bs>>>(n, grid, x, neighbors);
+  compute_neighbor<<<grid_every_particle, bs>>>(n, grid, x_cuda, neighbors);
 
-  compute_non_pressure_force<<<grid_every_particle, bs>>>(n, x, v, density,
+  compute_non_pressure_force<<<grid_every_particle, bs>>>(n, x_cuda, v, density,
                                                           accel, neighbors);
 
-  advect<<<grid_every_component, bs>>>(3 * n, x_last, x, v, accel);
+  advect<<<grid_every_component, bs>>>(3 * n, x_last, x_cuda, v, accel);
   cudaMemset(pressure, 0, sizeof(Float) * n);
   cudaMemset(accel, 0, sizeof(Float) * n * 3);
 
@@ -348,22 +357,24 @@ void PCISPH::solver() {
   int i = 0;
   for (; i < MAX_PRESSURE_ITERATIONS && density_err_max / density_0 > 0.01;
        i++) {
-    predict_x<<<grid_every_component, bs>>>(3 * n, x, x_last, accel);
-    compute_density<<<grid_every_particle, bs>>>(n, x, density, density_err,
-                                                 neighbors);
+    predict_x<<<grid_every_component, bs>>>(3 * n, x_cuda, x_last, accel);
+    compute_density<<<grid_every_particle, bs>>>(n, x_cuda, density,
+                                                 density_err, neighbors);
     compute_pressure<<<grid_every_particle, bs>>>(n, density_err, pressure);
-    compute_pressure_accel<<<grid_every_particle, bs>>>(n, x, pressure, density,
-                                                        accel, neighbors);
+    compute_pressure_accel<<<grid_every_particle, bs>>>(
+        n, x_cuda, pressure, density, accel, neighbors);
     density_err_max =
         thrust::reduce(thrust::device, density_err, density_err + n, 0.0f,
                        thrust::maximum<Float>());
   }
 
-  advect_pressure<<<grid_every_component, bs>>>(3 * n, x, x_last, v, accel);
-  enforceBoundaryComponent<<<grid_every_particle, bs>>>(n, x, v, xmin, xmax);
-  enforceBoundaryComponent<<<grid_every_particle, bs>>>(n, x + 1, v + 1, ymin,
-                                                        ymax);
-  enforceBoundaryComponent<<<grid_every_particle, bs>>>(n, x + 2, v + 2, zmin,
-                                                        zmax);
+  advect_pressure<<<grid_every_component, bs>>>(3 * n, x_cuda, x_last, v,
+                                                accel);
+  enforceBoundaryComponent<<<grid_every_particle, bs>>>(n, x_cuda, v, xmin,
+                                                        xmax);
+  enforceBoundaryComponent<<<grid_every_particle, bs>>>(n, x_cuda + 1, v + 1,
+                                                        ymin, ymax);
+  enforceBoundaryComponent<<<grid_every_particle, bs>>>(n, x_cuda + 2, v + 2,
+                                                        zmin, zmax);
   cudaDeviceSynchronize();
 }
