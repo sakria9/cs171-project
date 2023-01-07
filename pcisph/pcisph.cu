@@ -339,6 +339,7 @@ __global__ void enforceBoundaryComponent(int n, Float *x, Float *v, Float xmin,
 void PCISPH::solver() {
   clearGrid<<<grid_every_grid, bs>>>(grid);
   compute_hash<<<grid_every_particle, bs>>>(n, x_cuda, hash);
+  cudaDeviceSynchronize();
   for (int i = 0; i < n; i++) {
     int hashi = hash[i];
     if (grid[hashi][0] < MAX_PARTICLE_IN_GRID)
