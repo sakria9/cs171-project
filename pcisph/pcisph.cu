@@ -52,6 +52,7 @@ void PCISPH::init(int n, Float delta) {
 
   this->n = n;
   this->delta = delta;
+  cudaMemcpyToSymbol(::n, &n, sizeof(unsigned int));
   cudaMemcpyToSymbol(::xmin, &xmin, sizeof(Float));
   cudaMemcpyToSymbol(::xmax, &xmax, sizeof(Float));
   cudaMemcpyToSymbol(::ymin, &ymin, sizeof(Float));
@@ -122,7 +123,7 @@ __global__ void clearGrid(int grid[][MAX_PARTICLE_IN_GRID + 1]) {
   }
 }
 
-__global__ void compute_hash(int n, Float *x, unsigned int *hash) {
+__global__ void compute_hash(Float *x, unsigned int *hash) {
   int i = get_tid();
   if (i < n) {
     Float *xi = x + i * 3;
@@ -131,8 +132,8 @@ __global__ void compute_hash(int n, Float *x, unsigned int *hash) {
   }
 }
 
-__global__ void compute_neighbor(int n, int grid[][MAX_PARTICLE_IN_GRID + 1],
-                                 Float *x, int *neighbors) {
+__global__ void compute_neighbor(int grid[][MAX_PARTICLE_IN_GRID + 1], Float *x,
+                                 int *neighbors) {
   int pi = get_tid();
   if (pi < n) {
     int cnt = 0;
@@ -192,9 +193,8 @@ __device__ __host__ Float cubic_kernel(const Float r_norm) {
   return 0;
 }
 
-__global__ void compute_non_pressure_force(int n, Float *x, Float *v,
-                                           Float *density, Float *accel,
-                                           int *neighbors) {
+__global__ void compute_non_pressure_force(Float *x, Float *v, Float *density,
+                                           Float *accel, int *neighbors) {
   int i = get_tid();
   if (i < n) {
     int *nei = neighbors + i * MAX_NEIGHBORS;
@@ -239,12 +239,12 @@ __global__ void advect_pressure(int n, Float *x, Float *x_last, Float *v,
 __global__ void predict_x(int n, Float *x, Float *x_last, Float *accel) {
   int i = get_tid();
   if (i < n) {
-    x[i] = x_last[i] + accel[i] * fixed_delta_time * fixed_delta_time;
+    x[i] = x_last[i] + accel[i] * (fixed_delta_time * fixed_delta_time);
   }
 }
 
-__global__ void compute_density(int n, Float *x, Float *density,
-                                Float *density_err, int *neighbors) {
+__global__ void compute_density(Float *x, Float *density, Float *density_err,
+                                int *neighbors) {
   int i = get_tid();
   if (i < n) {
     int *ptr = neighbors + i * MAX_NEIGHBORS;
@@ -281,14 +281,14 @@ Float compute_density_err_max(int n, Float *density_err) {
   return max;
 }
 
-__global__ void compute_pressure(int n, Float *density_err, Float *pressure) {
+__global__ void compute_pressure(Float *density_err, Float *pressure) {
   int i = get_tid();
   if (i < n) {
     pressure[i] += delta * density_err[i];
   }
 }
 
-__global__ void compute_pressure_accel(int n, Float *x, Float *pressure,
+__global__ void compute_pressure_accel(Float *x, Float *pressure,
                                        Float *density, Float *pressure_accel,
                                        int *neighbors) {
   int i = get_tid();
@@ -338,16 +338,16 @@ __global__ void enforceBoundaryComponent(int n, Float *x, Float *v, Float xmin,
 
 void PCISPH::solver() {
   clearGrid<<<grid_every_grid, bs>>>(grid);
-  compute_hash<<<grid_every_particle, bs>>>(n, x_cuda, hash);
+  compute_hash<<<grid_every_particle, bs>>>(x_cuda, hash);
   cudaDeviceSynchronize();
   for (int i = 0; i < n; i++) {
     int hashi = hash[i];
     if (grid[hashi][0] < MAX_PARTICLE_IN_GRID)
       grid[hashi][++grid[hashi][0]] = i;
   }
-  compute_neighbor<<<grid_every_particle, bs>>>(n, grid, x_cuda, neighbors);
+  compute_neighbor<<<grid_every_particle, bs>>>(grid, x_cuda, neighbors);
 
-  compute_non_pressure_force<<<grid_every_particle, bs>>>(n, x_cuda, v, density,
+  compute_non_pressure_force<<<grid_every_particle, bs>>>(x_cuda, v, density,
                                                           accel, neighbors);
 
   advect<<<grid_every_component, bs>>>(3 * n, x_last, x_cuda, v, accel);
@@ -359,11 +359,11 @@ void PCISPH::solver() {
   for (; i < MAX_PRESSURE_ITERATIONS && density_err_max / density_0 > 0.01;
        i++) {
     predict_x<<<grid_every_component, bs>>>(3 * n, x_cuda, x_last, accel);
-    compute_density<<<grid_every_particle, bs>>>(n, x_cuda, density,
-                                                 density_err, neighbors);
-    compute_pressure<<<grid_every_particle, bs>>>(n, density_err, pressure);
+    compute_density<<<grid_every_particle, bs>>>(x_cuda, density, density_err,
+                                                 neighbors);
+    compute_pressure<<<grid_every_particle, bs>>>(density_err, pressure);
     compute_pressure_accel<<<grid_every_particle, bs>>>(
-        n, x_cuda, pressure, density, accel, neighbors);
+        x_cuda, pressure, density, accel, neighbors);
     density_err_max =
         thrust::reduce(thrust::device, density_err, density_err + n, 0.0f,
                        thrust::maximum<Float>());
