@@ -1,6 +1,5 @@
 #include "cuda.h"
 #include "pcisph.h"
-#include "robin_hood.h"
 #include <algorithm>
 #include <cassert>
 #include <cmath>
@@ -11,6 +10,12 @@
 
 #define get_tid()                                                              \
   (blockDim.x * (blockIdx.x + blockIdx.y * gridDim.x) + threadIdx.x)
+
+__device__ __constant__ unsigned int n;
+__device__ __constant__ Float xmin, xmax, ymin, ymax, zmin, zmax;
+__device__ __constant__ unsigned int grid_size_x, grid_size_y, grid_size_z;
+__device__ __constant__ unsigned int grid_size;
+__device__ __constant__ Float delta;
 
 PCISPH::PCISPH(const Float xmin, const Float xmax, const Float ymin,
                const Float ymax, const Float zmin, const Float zmax,
@@ -23,6 +28,8 @@ PCISPH::PCISPH(const Float xmin, const Float xmax, const Float ymin,
 int bs = 256;
 dim3 grid_every_particle;
 dim3 grid_every_component;
+
+dim3 grid_every_grid;
 
 void PCISPH::init(int n, Float delta) {
   auto initRes = cuInit(0);
@@ -39,9 +46,24 @@ void PCISPH::init(int n, Float delta) {
             << grid_every_particle.y << ',' << grid_every_particle.z << ')'
             << std::endl;
   std::cerr << "number of particles = " << n << std::endl;
+  unsigned int grid_size = grid_size_x * grid_size_y * grid_size_z;
+  std::cerr << "number of grid = " << grid_size << std::endl;
+  grid_every_grid = (grid_size + bs - 1) / bs;
 
   this->n = n;
   this->delta = delta;
+  cudaMemcpyToSymbol(::xmin, &xmin, sizeof(Float));
+  cudaMemcpyToSymbol(::xmax, &xmax, sizeof(Float));
+  cudaMemcpyToSymbol(::ymin, &ymin, sizeof(Float));
+  cudaMemcpyToSymbol(::ymax, &ymax, sizeof(Float));
+  cudaMemcpyToSymbol(::zmin, &zmin, sizeof(Float));
+  cudaMemcpyToSymbol(::zmax, &zmax, sizeof(Float));
+  cudaMemcpyToSymbol(::grid_size_x, &grid_size_x, sizeof(unsigned int));
+  cudaMemcpyToSymbol(::grid_size_y, &grid_size_y, sizeof(unsigned int));
+  cudaMemcpyToSymbol(::grid_size_z, &grid_size_z, sizeof(unsigned int));
+  cudaMemcpyToSymbol(::grid_size, &grid_size, sizeof(unsigned int));
+  cudaMemcpyToSymbol(::delta, &delta, sizeof(Float));
+
   cudaMallocManaged(&x, sizeof(Float) * n * 3);
   cudaMalloc(&x_last, sizeof(Float) * n * 3);
   cudaMalloc(&v, sizeof(Float) * n * 3);
@@ -51,7 +73,10 @@ void PCISPH::init(int n, Float delta) {
   cudaMalloc(&density_err, sizeof(Float) * n);
   cudaMalloc(&pressure, sizeof(Float) * n);
   cudaMalloc(&accel, sizeof(Float) * n * 3);
-  cudaMallocManaged(&neighbors, sizeof(int) * n * MAX_NEIGHBORS);
+  cudaMalloc(&neighbors, sizeof(int) * n * MAX_NEIGHBORS);
+  cudaMallocManaged(&grid,
+                    sizeof(int) * grid_size * (MAX_PARTICLE_IN_GRID + 1));
+  cudaMallocManaged(&hash, sizeof(unsigned int) * n);
 }
 
 PCISPH::~PCISPH() {
@@ -63,6 +88,80 @@ PCISPH::~PCISPH() {
   cudaFree(pressure);
   cudaFree(accel);
   cudaFree(neighbors);
+  cudaFree(grid);
+  cudaFree(hash);
+}
+
+__device__ int clamp(int x, int a, int b) { return max(a, min(b, x)); }
+
+__device__ int3 coordToGridIndex(float x, float y, float z) {
+  int3 index;
+  index.x = clamp((int)((x - xmin) / H), 0, grid_size_x - 1);
+  index.y = clamp((int)((y - ymin) / H), 0, grid_size_y - 1);
+  index.z = clamp((int)((z - zmin) / H), 0, grid_size_z - 1);
+  return index;
+}
+
+__device__ int gridIndexToHash(int3 index) {
+  return index.x * grid_size_y * grid_size_z + index.y * grid_size_z + index.z;
+}
+
+__global__ void clearGrid(int grid[][MAX_PARTICLE_IN_GRID + 1]) {
+  int i = get_tid();
+  if (i < grid_size) {
+    grid[i][0] = 0;
+  }
+}
+
+__global__ void compute_hash(int n, Float *x, unsigned int *hash) {
+  int i = get_tid();
+  if (i < n) {
+    Float *xi = x + i * 3;
+    int3 index = coordToGridIndex(xi[0], xi[1], xi[2]);
+    hash[i] = gridIndexToHash(index);
+  }
+}
+
+__global__ void compute_neighbor(int n, int grid[][MAX_PARTICLE_IN_GRID + 1],
+                                 Float *x, int *neighbors) {
+  int pi = get_tid();
+  if (pi < n) {
+    int cnt = 0;
+    Float *xi = x + pi * 3;
+    int *nei = neighbors + pi * MAX_NEIGHBORS;
+    int3 index = coordToGridIndex(xi[0], xi[1], xi[2]);
+    for (int i = -1; i <= 1; i++) {
+      for (int j = -1; j <= 1; j++) {
+        for (int k = -1; k <= 1; k++) {
+          int3 neighbor_index{index.x + i, index.y + j, index.z + k};
+          if (neighbor_index.x < 0 || neighbor_index.x >= grid_size_x ||
+              neighbor_index.y < 0 || neighbor_index.y >= grid_size_y ||
+              neighbor_index.z < 0 || neighbor_index.z >= grid_size_z)
+            continue;
+          long long hash = gridIndexToHash(neighbor_index);
+          for (int idx = 1; idx <= grid[hash][0]; idx++) {
+            int pj = grid[hash][idx];
+
+            if (pi == pj)
+              continue;
+
+            Float *xj = x + pj * 3;
+            Float r[3] = {xi[0] - xj[0], xi[1] - xj[1], xi[2] - xj[2]};
+            Float r_norm = sqrt(r[0] * r[0] + r[1] * r[1] + r[2] * r[2]);
+
+            if (r_norm > H)
+              continue;
+            nei[cnt++] = pj;
+            if (cnt == MAX_NEIGHBORS)
+              goto end;
+          }
+        }
+      }
+    }
+  end:
+    for (; cnt < MAX_NEIGHBORS; cnt++)
+      nei[cnt] = -1;
+  }
 }
 
 __device__ Float viscosity_laplacian(Float r_norm) {
@@ -173,8 +272,7 @@ Float compute_density_err_max(int n, Float *density_err) {
   return max;
 }
 
-__global__ void compute_pressure(int n, Float delta, Float *density_err,
-                                 Float *pressure) {
+__global__ void compute_pressure(int n, Float *density_err, Float *pressure) {
   int i = get_tid();
   if (i < n) {
     pressure[i] += delta * density_err[i];
@@ -230,8 +328,15 @@ __global__ void enforceBoundaryComponent(int n, Float *x, Float *v, Float xmin,
 }
 
 void PCISPH::solver() {
-  buildGrid(n, x, xmin, ymin, zmin, grid_size_x, grid_size_y, grid_size_z,
-            neighbors);
+  clearGrid<<<grid_every_grid, bs>>>(grid);
+  compute_hash<<<grid_every_particle, bs>>>(n, x, hash);
+  for (int i = 0; i < n; i++) {
+    int hashi = hash[i];
+    if (grid[hashi][0] < MAX_PARTICLE_IN_GRID)
+      grid[hashi][++grid[hashi][0]] = i;
+  }
+  compute_neighbor<<<grid_every_particle, bs>>>(n, grid, x, neighbors);
+
   compute_non_pressure_force<<<grid_every_particle, bs>>>(n, x, v, density,
                                                           accel, neighbors);
 
@@ -246,8 +351,7 @@ void PCISPH::solver() {
     predict_x<<<grid_every_component, bs>>>(3 * n, x, x_last, accel);
     compute_density<<<grid_every_particle, bs>>>(n, x, density, density_err,
                                                  neighbors);
-    compute_pressure<<<grid_every_particle, bs>>>(n, delta, density_err,
-                                                  pressure);
+    compute_pressure<<<grid_every_particle, bs>>>(n, density_err, pressure);
     compute_pressure_accel<<<grid_every_particle, bs>>>(n, x, pressure, density,
                                                         accel, neighbors);
     density_err_max =
