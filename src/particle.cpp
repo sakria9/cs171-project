@@ -249,15 +249,13 @@ void ParticleSystem::fixedUpdate() {
     }
   } else {
     simulate(simulation_steps_per_fixed_update_time);
-    if (use_external_pcisph) {
-      pcisph.copy_x_cuda_to_x();
+    if (use_external_pcisph)
       for (size_t i = 0; i < particles.size(); i++) {
         Float* xi = pcisph.x + i * 3;
         particles[i].x.x = xi[0];
         particles[i].x.y = xi[1];
         particles[i].x.z = xi[2];
       }
-    }
   }
 }
 

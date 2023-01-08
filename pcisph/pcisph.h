@@ -31,13 +31,10 @@ public:
          const Float zmin, const Float zmax, const size_t grid_size_x,
          const size_t grid_size_y, const size_t grid_size_z);
   void init(int n, Float delta);
-  void copy_x_to_x_cuda();
-  void copy_x_cuda_to_x();
   Float delta;
   void solver();
   int n;
   Float *x = 0;
-  Float *x_cuda = 0;
   Float *x_last = 0;
   Float *v = 0;
   Float *density = 0;

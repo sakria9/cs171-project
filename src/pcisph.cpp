@@ -205,7 +205,6 @@ void ParticleSystem::external_pcisph_init() {
     xi[1] = particles[i].x.y;
     xi[2] = particles[i].x.z;
   }
-  pcisph.copy_x_to_x_cuda();
 }
 
 void ParticleSystem::pci_sph_solver() {
