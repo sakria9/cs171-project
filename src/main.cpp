@@ -1,5 +1,10 @@
+#include <chrono>
+#include <cstdio>
+#include <fstream>
+#include <string>
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "cloth.h"
+#include "input.h"
 #include "particle.h"
 #include "scene.h"
 #include <cstdint>
@@ -41,10 +46,97 @@ auto drop_left_3d() {
   return particle_system;
 }
 
+auto drop_left_3d_large() {
+  // set particle radius to 0.07 may get better result
+  const Float L = 1.0f;
+  auto particle_system = std::make_shared<ParticleSystem>(L);
+  particle_system->generateParticles(Vec3(L, 2 * L, L), 9);
+  return particle_system;
+}
 
-int main() {
+auto drop_left_3d_Large() {
+  // CPU: 3.5s
+  // GPU: 1s
+  const Float L = 2.0f;
+  auto particle_system = std::make_shared<ParticleSystem>(L);
+  particle_system->generateParticles(Vec3(1.2f * L, 3.0f, L), 20);
+  return particle_system;
+}
 
-  /// settings
+auto drop_3d_Large() {
+  const Float L = 2.5f;
+  auto particle_system = std::make_shared<ParticleSystem>(L);
+  particle_system->generateParticles(Vec3(L, 1.0f, 2 * L), 15);
+  particle_system->generateParticles(Vec3(-1.5f * L, 4.0f, L), 30);
+  return particle_system;
+}
+
+int main(int argc, char *argv[]) {
+  std::shared_ptr<ParticleSystem> particle_system;
+  if (argc == 2) {
+    // do not show boundary indicators (set to 1000.0f)
+    particle_system = std::make_shared<ParticleSystem>(1000.0f);
+    // read from file
+    std::string filepath = argv[1];
+    std::cerr << "Read from " << filepath << std::endl;
+    std::fstream file;
+    file.open(filepath, std::ios::in | std::ios::binary);
+    int n;
+    file.read((char *)&n, sizeof(int));
+    int rounds;
+    file.read((char *)&rounds, sizeof(int));
+    std::cerr << "Read " << n << " particles, " << rounds << " frames"
+              << std::endl;
+    std::vector<Float> data;
+    data.resize(3 * n * rounds);
+    file.read((char *)data.data(), sizeof(Float) * 3 * n * rounds);
+    file.close();
+    std::cerr << "Read data " << data.size() << std::endl;
+    particle_system->use_data_init(n, std::move(data));
+    particle_system->fixedUpdate();
+  } else {
+    particle_system = drop_left_3d();
+#ifndef USE_CPU
+    particle_system->external_pcisph_init(); // comment this line to use CPU
+    std::cerr << "Using GPU" << std::endl;
+#else
+    std::cerr << "Using CPU" << std::endl;
+#endif
+    if (argc == 3) {
+      // simulate and output to file
+      std::string filepath = argv[1];
+      int rounds = std::stoi(argv[2]);
+
+      std::vector<Float> data;
+      int n = particle_system->particles.size();
+      data.resize(3 * n);
+
+      std::cerr << "Output to " << filepath << std::endl;
+      std::fstream file;
+      file.open(filepath, std::ios::out | std::ios::binary);
+      file.write((char *)&n, sizeof(int));
+      file.write((char *)&rounds, sizeof(int));
+
+      for (int cnt = 0; cnt < rounds; cnt++) {
+        auto st = std::chrono::high_resolution_clock::now();
+        std::cerr << "rendering frame " << cnt << std::endl;
+        particle_system->fixedUpdate();
+        for (int i = 0; i < n; i++) {
+          data[3 * i + 0] = particle_system->particles[i].x.x;
+          data[3 * i + 1] = particle_system->particles[i].x.y;
+          data[3 * i + 2] = particle_system->particles[i].x.z;
+        }
+        file.write((char *)data.data(), sizeof(Float) * 3 * n);
+        auto ed = std::chrono::high_resolution_clock::now();
+        auto dur =
+            std::chrono::duration_cast<std::chrono::milliseconds>(ed - st);
+        std::cerr << "frame " << cnt << " took " << dur.count() << "ms"
+                  << std::endl;
+      }
+      file.close();
+      exit(0);
+    }
+  }
 
   // window
   constexpr int window_width = 1920;
@@ -112,15 +204,8 @@ int main() {
     scene.light_position = {0, 3, -10};
     scene.light_color = Vec3(1, 1, 1) * Float(1.125);
 
-    // clothes
-    auto cloth = std::make_shared<RectCloth>(cloth_weight, mass_dim, dx_local,
-                                             stiffness, damping_ratio);
-    for (const auto &fixed_mass : fixed_masses) {
-      if (!cloth->SetMassFixedOrNot(fixed_mass.x, fixed_mass.y, true))
-        abort();
-    }
-
-    auto particle_system = drop_center_3d();
+    particle_system->mesh_sphere =
+        std::make_shared<Mesh>(MeshPrimitiveType::sphere);
     {
       auto objs = particle_system->boundryIndicators();
       scene.objects.insert(scene.objects.end(), objs.begin(), objs.end());
@@ -136,6 +221,7 @@ int main() {
 
     std::string prefix = "~/cgout/2d/";
     size_t cnt = 0;
+    bool start = false;
     while (!glfwWindowShouldClose(window)) {
       Input::Update();
       Time::Update();
@@ -151,9 +237,12 @@ int main() {
       if (Input::GetKey(KeyCode::Escape))
         glfwSetWindowShouldClose(window, true);
 
+      if (Input::GetKey(KeyCode::Return))
+        start = true;
+
       // /// fixed update
       // for (unsigned i = 0; i < Time::fixed_update_times_this_frame; ++i) {
-      if (Input::GetKey(KeyCode::Space)) //! only when space is pressed
+      if (Input::GetKey(KeyCode::Space) || start) //! only when space is pressed
       {
         scene.FixedUpdate();
         particle_system->fixedUpdate();
@@ -166,8 +255,8 @@ int main() {
       /// render
       {
         scene.RenderUpdate();
-        //particle_system->renderParticle(scene);
-         particle_system->renderSurface(scene);
+        particle_system->renderParticle(scene);
+        // particle_system->renderSurface(scene);
       }
 
       // swap front and back buffers
@@ -176,16 +265,19 @@ int main() {
       // poll for and process events
       glfwPollEvents();
 
+      // std::cerr << "render time: " << Time::delta_time << std::endl;
+
       // get window capture
-      // std::cerr << "capture " << cnt << std::endl;
-      // glReadPixels(0, 0, window_width, window_height, GL_RGB,
-      // GL_UNSIGNED_BYTE,
-      //              pixels);
-      // std::string filename = prefix + std::to_string(cnt++) + ".png";
-      // stbi_flip_vertically_on_write(true);
-      // stbi_write_png(filename.c_str(), window_width, window_height, 3,
-      // pixels,
-      //                window_width * 3);
+      if (start) {
+        // std::cerr << "capture " << cnt << std::endl;
+        // glReadPixels(0, 0, window_width, window_height, GL_RGB,
+        //              GL_UNSIGNED_BYTE, pixels);
+        // std::string filename = prefix + std::to_string(cnt++) + ".png";
+        // stbi_flip_vertically_on_write(true);
+        // stbi_write_png(filename.c_str(), window_width, window_height, 3,
+        // pixels,
+        //                window_width * 3);
+      }
     }
   }
 

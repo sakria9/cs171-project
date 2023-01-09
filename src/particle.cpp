@@ -231,11 +231,36 @@ void ParticleSystem::simulate(unsigned int num_steps) {
     simulate();
 }
 
+void ParticleSystem::use_data_init(size_t n, std::vector<Float> &&data){
+  use_data = true;
+  this->data = std::move(data);
+  particles.resize(n);
+  data_idx = 0;
+}
+
 void ParticleSystem::fixedUpdate() {
-  simulate(simulation_steps_per_fixed_update_time);
+  if (use_data) {
+    if (data_idx < data.size()) {
+      for (size_t i = 0; i < particles.size(); i++) {
+        particles[i].x.x = data[data_idx++];
+        particles[i].x.y = data[data_idx++];
+        particles[i].x.z = data[data_idx++];
+      }
+    }
+  } else {
+    simulate(simulation_steps_per_fixed_update_time);
+    if (use_external_pcisph)
+      for (size_t i = 0; i < particles.size(); i++) {
+        Float* xi = pcisph.x + i * 3;
+        particles[i].x.x = xi[0];
+        particles[i].x.y = xi[1];
+        particles[i].x.z = xi[2];
+      }
+  }
 }
 
 void ParticleSystem::renderParticle(const Scene &scene) {
+  assert(mesh_sphere != nullptr);
   const Float particle_scale = .8;
   auto shader = Shader::shader_phong;
   const Vec3 color(0, 0, one);
@@ -599,7 +624,7 @@ void ParticleSystem::MarchCube(float fX, float fY, float fZ, float Scale)
     float Offset, CubeValue[8];   
     Vec3 EdgeVertex[12], EdgeNorm[12];
     Vec3 densitypoint;
-    float TargetValue=700;//Temp
+    float TargetValue=200;//Temp
 //找到立方体的8个顶点的值
     for (int i = 0; i < 8; i++)
     {

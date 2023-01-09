@@ -109,35 +109,21 @@ Vec3 viscosity_accel(const Particle &pi, const Particle &pj) {
          viscosity_laplacian(glm::length(r)) * (pj.v - pi.v);
 }
 
-void ParticleSystem::compute_non_pressure_force() {
+void ParticleSystem::advect_non_pressure_force() {
 #pragma omp parallel for
   for (auto &pi : particles) {
-    Float density = density_kernel(0);
+    auto external_force_accel = g;
     for (auto &pj_ptr : pi.neighbors) {
       Particle &pj = *pj_ptr;
-      density += density_kernel(glm::length(pi.x_pred - pj.x_pred));
+      external_force_accel += viscosity_accel(pi, pj);
     }
-    density *= particle_mass;
-    pi.density = density;
-  }
-
-#pragma omp parallel for
-  for (auto &pi : particles) {
-    pi.external_force_accel = g;
-    for (auto &pj_ptr : pi.neighbors) {
-      Particle &pj = *pj_ptr;
-      pi.external_force_accel += viscosity_accel(pi, pj);
-    }
-  }
-}
-void ParticleSystem::advect() {
-#pragma omp parallel for
-  for (auto &pi : particles) {
-    pi.v += pi.external_force_accel * fixed_delta_time;
+    pi.v += external_force_accel * fixed_delta_time;
     pi.x += pi.v * fixed_delta_time;
+
+    pi.pressure = 0;
+    pi.pressure_accel = {0, 0, 0};
   }
 }
-
 void ParticleSystem::compute_delta() {
   const Float beta = pow(fixed_delta_time, 2) * pow(particle_mass, 2);
   // TODO: fix
@@ -173,14 +159,6 @@ Vec3 pressure_accel(const Particle &pi, const Particle &pj) {
   return res;
 }
 
-void ParticleSystem::prepare_iteration() {
-#pragma omp parallel for
-  for (auto &pi : particles) {
-    pi.pressure = 0;
-    pi.pressure_accel = {0, 0, 0};
-  }
-}
-
 void ParticleSystem::pressure_iteration() {
   density_err_max = 0;
 #pragma omp parallel for
@@ -213,30 +191,42 @@ void ParticleSystem::pressure_iteration() {
 void ParticleSystem::advect_pressure() {
 #pragma omp parallel for
   for (auto &pi : particles) {
-    auto accel = pi.pressure_accel;
-    pi.v += accel * fixed_delta_time;
-    pi.x += accel * fixed_delta_time * fixed_delta_time;
+    pi.v += pi.pressure_accel * fixed_delta_time;
+    pi.x += pi.pressure_accel * fixed_delta_time * fixed_delta_time;
+  }
+}
+
+void ParticleSystem::external_pcisph_init() {
+  use_external_pcisph = true;
+  pcisph.init(particles.size(), delta);
+  for (size_t i = 0; i < particles.size(); i++) {
+    Float* xi = pcisph.x + i * 3;
+    xi[0] = particles[i].x.x;
+    xi[1] = particles[i].x.y;
+    xi[2] = particles[i].x.z;
   }
 }
 
 void ParticleSystem::pci_sph_solver() {
-  buildGrid();
-  compute_non_pressure_force();
-  advect();
+  if (use_external_pcisph) {
+    pcisph.solver();
+  } else {
+    buildGrid();
+    advect_non_pressure_force();
 
-  prepare_iteration();
-  density_err_max = density_0;
-  {
-    int i = 0;
-    for (; i < 2 && density_err_max / density_0 > 0.01; i++)
-      pressure_iteration();
-    // if ((density_err_max / density_0) > 0.01)
-    //   std::cerr << "pressure iteration: " << i << ' '
-    //             << (density_err_max / density_0 * 100) << "% error" << std::endl;
+    density_err_max = density_0;
+    {
+      int i = 0;
+      for (; i < MAX_PRESSURE_ITERATIONS && density_err_max / density_0 > 0.01; i++)
+        pressure_iteration();
+      // if ((density_err_max / density_0) > 0.01)
+      //   std::cerr << "pressure iteration: " << i << ' '
+      //             << (density_err_max / density_0 * 100) << "% error" << std::endl;
+    }
+    advect_pressure();
+
+    enforceBoundaries();
   }
-  advect_pressure();
-
-  enforceBoundaries();
 }
 
 void ParticleSystem::enforceBoundaries() {
