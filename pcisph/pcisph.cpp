@@ -1,12 +1,5 @@
 #include "pcisph.h"
-#include "robin_hood.h"
-#include <algorithm>
-#include <cassert>
-#include <cmath>
-#include <cstdlib>
-#include <cstring>
 #include <iostream>
-#include <vector>
 
 PCISPH::PCISPH(const Float xmin, const Float xmax, const Float ymin,
                const Float ymax, const Float zmin, const Float zmax,
