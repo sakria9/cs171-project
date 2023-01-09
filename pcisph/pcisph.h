@@ -2,7 +2,7 @@
 
 using Float = float;
 
-const int MAX_PRESSURE_ITERATIONS = 100;
+const int MAX_PRESSURE_ITERATIONS = 5;
 const int MAX_NEIGHBORS = 45;
 const int MAX_PARTICLE_IN_GRID = 20;
 const Float particle_radius = 0.05;

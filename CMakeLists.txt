@@ -69,6 +69,12 @@ target_compile_features(main_cpu PRIVATE cxx_std_20)
 target_compile_definitions(main_cpu PRIVATE -DUSE_CPU ${DEFINES})
 target_link_libraries(main_cpu PRIVATE PCISPH_CPU ${LIBRARIES})
 
+add_executable(main_surface ${SRC_FILES} ${INTERNAL_SRC_FILES} src/glad.c)
+target_include_directories(main_surface PRIVATE include)
+target_compile_features(main_surface PRIVATE cxx_std_20)
+target_compile_definitions(main_surface PRIVATE -DUSE_CPU -DSURFACE_EXTRACTION ${DEFINES})
+target_link_libraries(main_surface PRIVATE PCISPH_CPU ${LIBRARIES})
+
 if (CUDA_FOUND)
     add_executable(main_cuda ${SRC_FILES} ${INTERNAL_SRC_FILES} src/glad.c)
     target_include_directories(main_cuda PRIVATE include)

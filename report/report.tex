@@ -300,7 +300,8 @@ The scene contains 44294 particles.
 \subsection{CUDA}
 
 CUDA speeds up the simulation dramatically.
-The speed up ratio depends on the number of particles.
+All timings are given for two EPYC-7742(128 cores in total) or one V100.
+The result is shown in Tab~\ref{tab:cuda}
 
 \begin{table}[h]
 	\begin{tabular}{l|l|l|l}
@@ -311,16 +312,16 @@ The speed up ratio depends on the number of particles.
 		1331      & 15783         & 1439           & 10.9x    \\ \hline
 		343       & 7015          & 1140           & 6.1x     \\
 	\end{tabular}
+	\caption{CUDA speed up}
+	\label{tab:cuda}
 \end{table}
 
 \subsection{Surface extraction}
-
 
 \begin{figure}[h]
 	\centering
 	\includegraphics[width=0.40\textwidth]{surface-extraction.png}
 	\caption{Surface extraction}
-	\label{fig:particle}
 \end{figure}
 
 

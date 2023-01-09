@@ -35,7 +35,7 @@ auto drop_center_3d() {
 auto drop_center_3d_large() {
   const Float L = 1.0f;
   auto particle_system = std::make_shared<ParticleSystem>(L);
-  particle_system->generateParticles(Vec3(0, L, L), 3);
+  particle_system->generateParticles(Vec3(0, L, L), 5);
   return particle_system;
 }
 
@@ -47,7 +47,6 @@ auto drop_left_3d() {
 }
 
 auto drop_left_3d_large() {
-  // set particle radius to 0.07 may get better result
   const Float L = 1.0f;
   auto particle_system = std::make_shared<ParticleSystem>(L);
   particle_system->generateParticles(Vec3(L, 2 * L, L), 9);
@@ -55,8 +54,6 @@ auto drop_left_3d_large() {
 }
 
 auto drop_left_3d_Large() {
-  // CPU: 3.5s
-  // GPU: 1s
   const Float L = 2.0f;
   auto particle_system = std::make_shared<ParticleSystem>(L);
   particle_system->generateParticles(Vec3(1.2f * L, 3.0f, L), 20);
@@ -75,7 +72,7 @@ int main(int argc, char *argv[]) {
   std::shared_ptr<ParticleSystem> particle_system;
   if (argc == 2) {
     // do not show boundary indicators (set to 1000.0f)
-    particle_system = std::make_shared<ParticleSystem>(1000.0f);
+    particle_system = std::make_shared<ParticleSystem>(1.0f);
     // read from file
     std::string filepath = argv[1];
     std::cerr << "Read from " << filepath << std::endl;
@@ -95,7 +92,7 @@ int main(int argc, char *argv[]) {
     particle_system->use_data_init(n, std::move(data));
     particle_system->fixedUpdate();
   } else {
-    particle_system = drop_left_3d();
+    particle_system = drop_center_3d_large();
 #ifndef USE_CPU
     particle_system->external_pcisph_init(); // comment this line to use CPU
     std::cerr << "Using GPU" << std::endl;
@@ -256,7 +253,9 @@ int main(int argc, char *argv[]) {
       {
         scene.RenderUpdate();
         particle_system->renderParticle(scene);
-        // particle_system->renderSurface(scene);
+#ifdef SURFACE_EXTRACTION
+        particle_system->renderSurface(scene);
+#endif
       }
 
       // swap front and back buffers
