@@ -25,8 +25,8 @@
 % Title portion
 \title{Final Project:\\ {Liquid Simulation by SPH Method}} 
 
-\author{Name:\quad YiHeng Wu  \\ student number:\ 2019533077
-\\email:\quad wuyh3@shanghaitech.edu.cn}
+\author{Name:\quad JiaYing Du + AIBO Hu  \\ student number:\ 2021533037 + ?
+\\email:\quad dujy2@shanghaitech.edu.cn + ?}
 
 % Document starts
 \begin{document}
@@ -38,10 +38,19 @@
 \begin{itemize}
 \item ... has been down.
 \item ...
-\item ...
+\item The surface rendering is done.
 \end{itemize}
 \section{Implementation Details}
-
+\item In the surface rendering part, I adopted the marchcube method for its simplicity and wide usage.\\
+The marchcube method is a method described below:\\
+When You are processing a cloud of particles you can compute the density of them like in the steps above. Therefore, 
+you can assume at a sample point there is a particle, you can compute the density of the hypothetical particle.\\
+We figure out the possible space where liquid may appear and we divide the space with mesh cube. We can get sample points lying on 
+every cross point of the mesh cube. We compute the density for each point. We can get the condition of each small grid.\\
+Having got the condition for each small grid. We set a threshold density and then binarize the values. We can design a map mapping each condition of small grid ($2^8$) to 
+different surface conditions, i.e. different vertices and different faces. Because the cubes are adjacent we have to design the map carefully. 
+Therefore I use the universially recogized marching cube map.\\
+Then we can get the vertices and faces of the surface. Drawing them out we get the surface rendering outcome.
 \section{Results}
 % pictures should be in
 
