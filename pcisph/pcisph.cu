@@ -166,14 +166,14 @@ __global__ void compute_neighbor(int grid[][MAX_PARTICLE_IN_GRID + 1], Float *x,
   }
 }
 
-__device__ Float viscosity_laplacian(Float r_norm) {
+__device__ static Float viscosity_laplacian(Float r_norm) {
   Float k = 45.0f / (M_PI * H6);
   r_norm = min(r_norm, H);
   return k * (H - r_norm);
 }
 
 const Float cubic_kernel0 = 8 / (M_PI * H3);
-__device__ __host__ Float cubic_kernel(const Float r_norm) {
+__device__ __host__ static Float cubic_kernel(const Float r_norm) {
   Float k = 8 / (M_PI * H3);
   Float q = r_norm / H;
   if (q <= 1.0) {

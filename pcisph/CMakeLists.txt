@@ -1,5 +1,5 @@
 if (CUDA_FOUND)
-    add_library(PCISPH_CUDA SHARED pcisph.cu)
+    add_library(PCISPH_CUDA STATIC pcisph.cu)
     set_target_properties(PCISPH_CUDA PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
     set_target_properties(PCISPH_CUDA PROPERTIES CUDA_ARCHITECTURES native)
 endif()
