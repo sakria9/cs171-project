@@ -4,6 +4,7 @@ using Float = float;
 
 const int MAX_PRESSURE_ITERATIONS = 100;
 const int MAX_NEIGHBORS = 45;
+const int MAX_PARTICLE_IN_GRID = 20;
 const Float particle_radius = 0.05;
 const Float density_0 = 1000;
 #ifdef D2
@@ -13,6 +14,9 @@ const Float particle_mass = density_0 * std::pow(2 * particle_radius, 2);
 const Float particle_mass = 1; // to make CUDA happy
 #endif
 const Float H = 4 * particle_radius;
+const Float H2 = H * H;
+const Float H3 = H * H * H;
+const Float H6 = H * H * H * H * H * H;
 const Float viscosity = 0.05;
 
 static constexpr unsigned simulation_steps_per_fixed_update_time = 200;
@@ -38,10 +42,7 @@ public:
   Float *pressure = 0;
   Float *accel = 0;
   int *neighbors = 0;
+  int (*grid)[MAX_PARTICLE_IN_GRID + 1] = 0;
+  unsigned int *hash = 0;
   ~PCISPH();
 };
-
-void buildGrid(int n, Float *x, const Float xmin, const Float ymin,
-               const Float zmin, const size_t grid_size_x,
-               const size_t grid_size_y, const size_t grid_size_z,
-               int *neighbors);
