@@ -4,6 +4,8 @@ PDF report: `report/report.pdf`
 
 `report/particles-44294.mp4` is a video of the simulation. The simulation result is stored in `n-44294_f-600.data`
 
+A Linux release is in `release/{main_cpu,main_cuda,main_surface}`.
+
 ## Build
 
 set CUDA dependency path to your own path in `CMakeLists.txt` (Line 52-54).
